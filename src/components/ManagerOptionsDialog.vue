@@ -18,9 +18,9 @@ watch(
   () => props.open,
   async (isOpen) => {
     if (isOpen) {
+      window.addEventListener("keydown", onEscapeKey);
       form.value = { ...store.settings };
       launchAtLogin.value = await isEnabled();
-      window.addEventListener("keydown", onEscapeKey);
     } else {
       window.removeEventListener("keydown", onEscapeKey);
     }

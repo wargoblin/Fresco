@@ -32,9 +32,9 @@ watch(
   () => props.open,
   async (isOpen) => {
     if (isOpen) {
+      window.addEventListener("keydown", onEscapeKey);
       reset();
       await loadCurrentInfo();
-      window.addEventListener("keydown", onEscapeKey);
     } else {
       window.removeEventListener("keydown", onEscapeKey);
     }
