@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, onBeforeUnmount } from "vue";
 import { getProxySettings, setProxySettings } from "../composables/useRpc";
 import type { ProxyInfo } from "../types/boinc";
 
@@ -12,12 +12,17 @@ const saving = ref(false);
 const error = ref("");
 const form = ref<ProxyInfo | null>(null);
 
+function onEscapeKey(e: KeyboardEvent) {
+  if (e.key === "Escape") emit("close");
+}
+
 watch(
   () => props.open,
   async (isOpen) => {
     if (isOpen) {
       loading.value = true;
       error.value = "";
+      window.addEventListener("keydown", onEscapeKey);
       try {
         const proxy = await getProxySettings();
         form.value = { ...proxy };
@@ -26,9 +31,15 @@ watch(
       } finally {
         loading.value = false;
       }
+    } else {
+      window.removeEventListener("keydown", onEscapeKey);
     }
   },
 );
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onEscapeKey);
+});
 
 async function save() {
   if (!form.value) return;
@@ -48,10 +59,10 @@ async function save() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div class="proxy-dialog">
+      <div class="proxy-dialog" role="dialog" aria-modal="true" aria-labelledby="proxy-settings-dialog-title">
         <div class="proxy-header">
-          <h3>Proxy Settings</h3>
-          <button class="close-btn" @click="emit('close')">&times;</button>
+          <h3 id="proxy-settings-dialog-title">Proxy Settings</h3>
+          <button class="close-btn" aria-label="Close" @click="emit('close')">&times;</button>
         </div>
 
         <div v-if="loading" class="proxy-loading">Loading proxy settings...</div>

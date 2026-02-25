@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, onBeforeUnmount } from "vue";
 import type { DataTableColumn } from "./DataTable.vue";
 
 const props = defineProps<{
@@ -15,14 +15,25 @@ const emit = defineEmits<{
 
 const localKeys = ref<Set<string>>(new Set());
 
+function onEscapeKey(e: KeyboardEvent) {
+  if (e.key === "Escape") emit("close");
+}
+
 watch(
   () => props.open,
   (isOpen) => {
     if (isOpen) {
       localKeys.value = new Set(props.visibleKeys);
+      window.addEventListener("keydown", onEscapeKey);
+    } else {
+      window.removeEventListener("keydown", onEscapeKey);
     }
   },
 );
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onEscapeKey);
+});
 
 function toggle(key: string) {
   const next = new Set(localKeys.value);
@@ -46,10 +57,10 @@ function save() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div class="dialog">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="column-dialog-title">
         <div class="dialog-header">
-          <h3>Columns</h3>
-          <button class="close-btn" @click="emit('close')">&times;</button>
+          <h3 id="column-dialog-title">Columns</h3>
+          <button class="close-btn" aria-label="Close" @click="emit('close')">&times;</button>
         </div>
         <div class="dialog-body">
           <label

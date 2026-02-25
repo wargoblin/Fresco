@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, onBeforeUnmount } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useUpdateCheck, startBackgroundDownload } from "../composables/useUpdateCheck";
 
@@ -20,15 +20,26 @@ const {
   dismissUpdate,
 } = useUpdateCheck();
 
+function onEscapeKey(e: KeyboardEvent) {
+  if (e.key === "Escape") emit("close");
+}
+
 watch(
   () => props.open,
   (isOpen) => {
     if (isOpen) {
       updating.value = false;
       updateError.value = "";
+      window.addEventListener("keydown", onEscapeKey);
+    } else {
+      window.removeEventListener("keydown", onEscapeKey);
     }
   },
 );
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onEscapeKey);
+});
 
 function formatBuildTime(bt: string): string {
   if (!bt || bt === "dev") return "Development build";
@@ -103,11 +114,11 @@ async function openGitHub() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div class="about-dialog">
+      <div class="about-dialog" role="dialog" aria-modal="true" aria-labelledby="about-dialog-title">
         <div class="about-logo">
           <img src="/icon.png" alt="Fresco" width="64" height="64" />
         </div>
-        <h3>Fresco</h3>
+        <h3 id="about-dialog-title">Fresco</h3>
         <p class="build-time">Built: {{ formatBuildTime(buildTime) }}</p>
         <p class="description">
           A modern alternative to the official BOINC Manager, built with Tauri.

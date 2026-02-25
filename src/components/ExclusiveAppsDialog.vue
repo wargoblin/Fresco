@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, onBeforeUnmount } from "vue";
 import { getCcConfig, setCcConfig } from "../composables/useRpc";
 import type { CcConfig } from "../types/boinc";
 
@@ -32,6 +32,10 @@ function initFromConfig(cc: CcConfig) {
   };
 }
 
+function onEscapeKey(e: KeyboardEvent) {
+  if (e.key === "Escape") emit("close");
+}
+
 watch(
   () => props.open,
   async (isOpen) => {
@@ -39,6 +43,7 @@ watch(
       error.value = "";
       newCpuApp.value = "";
       newGpuApp.value = "";
+      window.addEventListener("keydown", onEscapeKey);
 
       if (cachedConfig) {
         initFromConfig(cachedConfig);
@@ -53,9 +58,15 @@ watch(
           loading.value = false;
         }
       }
+    } else {
+      window.removeEventListener("keydown", onEscapeKey);
     }
   },
 );
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onEscapeKey);
+});
 
 defineExpose({ prefetch });
 
@@ -105,10 +116,10 @@ async function save() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div class="exclusive-dialog">
+      <div class="exclusive-dialog" role="dialog" aria-modal="true" aria-labelledby="exclusive-apps-dialog-title">
         <div class="exclusive-header">
-          <h3>Exclusive Applications</h3>
-          <button class="close-btn" @click="emit('close')">&times;</button>
+          <h3 id="exclusive-apps-dialog-title">Exclusive Applications</h3>
+          <button class="close-btn" aria-label="Close" @click="emit('close')">&times;</button>
         </div>
 
         <div v-if="loading" class="exclusive-loading">Loading configuration...</div>

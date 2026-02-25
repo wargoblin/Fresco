@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onBeforeUnmount } from "vue";
 import { usePreferencesStore } from "../stores/preferences";
 import { useManagerSettingsStore } from "../stores/managerSettings";
 import type { GlobalPreferences } from "../types/boinc";
@@ -43,6 +43,7 @@ watch(
       activeTab.value = props.initialTab;
       managerForm.value = { ...managerStore.settings };
       exclusiveAppsRef.value?.prefetch();
+      window.addEventListener("keydown", onEscapeKey);
       if (store.prefetched && store.prefs) {
         // Data already cached — show instantly
         initForm(store.prefs);
@@ -53,9 +54,15 @@ watch(
           initForm(store.prefs);
         }
       }
+    } else {
+      window.removeEventListener("keydown", onEscapeKey);
     }
   },
 );
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onEscapeKey);
+});
 
 function initForm(prefs: GlobalPreferences) {
   // Deep clone to avoid mutating store state (day_prefs is an array of objects)
@@ -115,6 +122,12 @@ function setDayField(dayOfWeek: number, field: "start_hour" | "end_hour" | "net_
   getDayPref(dayOfWeek)[field] = value;
 }
 
+function onEscapeKey(e: KeyboardEvent) {
+  if (e.key !== "Escape") return;
+  if (showProxy.value || showExclusiveApps.value) return;
+  emit("close");
+}
+
 async function save() {
   // Always save manager settings
   Object.assign(managerStore.settings, managerForm.value);
@@ -132,10 +145,10 @@ async function save() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay">
-      <div class="prefs-dialog">
+      <div class="prefs-dialog" role="dialog" aria-modal="true" aria-labelledby="preferences-dialog-title">
         <div class="prefs-header">
-          <h3>Preferences</h3>
-          <button class="close-btn" @click="emit('close')">&times;</button>
+          <h3 id="preferences-dialog-title">Preferences</h3>
+          <button class="close-btn" aria-label="Close" @click="emit('close')">&times;</button>
         </div>
 
         <div v-if="store.loading && !form" class="prefs-loading">Loading preferences...</div>

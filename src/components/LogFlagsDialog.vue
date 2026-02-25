@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, onBeforeUnmount } from "vue";
 import { getCcConfig, setCcConfig } from "../composables/useRpc";
 import type { CcConfig, LogFlags } from "../types/boinc";
 
@@ -24,12 +24,17 @@ const flagLabels: { key: keyof LogFlags; label: string }[] = [
   { key: "statefile_debug", label: "State file debug" },
 ];
 
+function onEscapeKey(e: KeyboardEvent) {
+  if (e.key === "Escape") emit("close");
+}
+
 watch(
   () => props.open,
   async (isOpen) => {
     if (isOpen) {
       loading.value = true;
       error.value = "";
+      window.addEventListener("keydown", onEscapeKey);
       try {
         const cc = await getCcConfig();
         config.value = {
@@ -43,9 +48,15 @@ watch(
       } finally {
         loading.value = false;
       }
+    } else {
+      window.removeEventListener("keydown", onEscapeKey);
     }
   },
 );
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onEscapeKey);
+});
 
 async function save() {
   if (!config.value) return;
@@ -65,10 +76,10 @@ async function save() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div class="logflags-dialog">
+      <div class="logflags-dialog" role="dialog" aria-modal="true" aria-labelledby="log-flags-dialog-title">
         <div class="logflags-header">
-          <h3>Diagnostic Log Flags</h3>
-          <button class="close-btn" @click="emit('close')">&times;</button>
+          <h3 id="log-flags-dialog-title">Diagnostic Log Flags</h3>
+          <button class="close-btn" aria-label="Close" @click="emit('close')">&times;</button>
         </div>
 
         <div v-if="loading" class="logflags-loading">Loading configuration...</div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, onBeforeUnmount } from "vue";
 import { acctMgrInfo, acctMgrRpc, acctMgrRpcPoll } from "../composables/useRpc";
 import type { AcctMgrInfo } from "../types/boinc";
 import {
@@ -24,15 +24,26 @@ const mgrUrl = ref("");
 const userName = ref("");
 const password = ref("");
 
+function onEscapeKey(e: KeyboardEvent) {
+  if (e.key === "Escape") close();
+}
+
 watch(
   () => props.open,
   async (isOpen) => {
     if (isOpen) {
       reset();
       await loadCurrentInfo();
+      window.addEventListener("keydown", onEscapeKey);
+    } else {
+      window.removeEventListener("keydown", onEscapeKey);
     }
   },
 );
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onEscapeKey);
+});
 
 async function loadCurrentInfo() {
   loading.value = true;
@@ -132,9 +143,9 @@ function close() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="close">
-      <div class="wizard">
+      <div class="wizard" role="dialog" aria-modal="true" aria-labelledby="account-manager-wizard-title">
         <div class="wizard-header">
-          <h3>
+          <h3 id="account-manager-wizard-title">
             {{
               step === "form"
                 ? "Account Manager"
@@ -143,7 +154,7 @@ function close() {
                   : "Done"
             }}
           </h3>
-          <button class="close-btn" @click="close">&times;</button>
+          <button class="close-btn" aria-label="Close" @click="close">&times;</button>
         </div>
 
         <!-- Step 1: Form -->
