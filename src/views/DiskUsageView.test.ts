@@ -28,80 +28,7 @@ vi.mock("../components/EmptyState.vue", () => ({
   default: { template: '<div class="empty-state">No data</div>' },
 }));
 
-// ── Pure function tests ─────────────────────────────────────────
-// DiskUsageView defines these as local functions inside <script setup>.
-// We can't import them directly, so we replicate them for testing.
-// These tests ensure the formatting logic is correct.
-
-function formatBytes(bytes: number): string {
-  if (bytes <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
-}
-
-function formatPercent(fraction: number): string {
-  return `${(fraction * 100).toFixed(1)}%`;
-}
-
-describe("DiskUsageView utility functions", () => {
-  describe("formatBytes", () => {
-    it("returns '0 B' for zero", () => {
-      expect(formatBytes(0)).toBe("0 B");
-    });
-
-    it("returns '0 B' for negative values", () => {
-      expect(formatBytes(-100)).toBe("0 B");
-    });
-
-    it("formats bytes", () => {
-      expect(formatBytes(512)).toBe("512.0 B");
-    });
-
-    it("formats kilobytes", () => {
-      expect(formatBytes(1024)).toBe("1.0 KB");
-      expect(formatBytes(1536)).toBe("1.5 KB");
-    });
-
-    it("formats megabytes", () => {
-      expect(formatBytes(1048576)).toBe("1.0 MB");
-    });
-
-    it("formats gigabytes", () => {
-      expect(formatBytes(1073741824)).toBe("1.0 GB");
-    });
-
-    it("formats terabytes", () => {
-      expect(formatBytes(1099511627776)).toBe("1.0 TB");
-    });
-
-    it("caps at TB for very large values", () => {
-      // 1024 TB = should still show as TB (no PB unit)
-      const petabyte = 1099511627776 * 1024;
-      expect(formatBytes(petabyte)).toBe("1024.0 TB");
-    });
-  });
-
-  describe("formatPercent", () => {
-    it("formats zero", () => {
-      expect(formatPercent(0)).toBe("0.0%");
-    });
-
-    it("formats 50%", () => {
-      expect(formatPercent(0.5)).toBe("50.0%");
-    });
-
-    it("formats 100%", () => {
-      expect(formatPercent(1)).toBe("100.0%");
-    });
-
-    it("formats fractional percentage", () => {
-      expect(formatPercent(0.333)).toBe("33.3%");
-    });
-  });
-});
-
-describe("DiskUsageView component", () => {
+describe("DiskUsageView", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });
@@ -185,6 +112,61 @@ describe("DiskUsageView component", () => {
 
     const wrapper = mount(DiskUsageView);
     expect(wrapper.text()).toContain("https://unknown.org/");
+  });
+
+  it("formats bytes correctly for MB-range values", () => {
+    const store = useDiskUsageStore();
+    store.loading = false;
+    store.usage = {
+      projects: [],
+      d_total: 1048576,   // 1 MB
+      d_free: 524288,     // 512 KB
+      d_boinc: 0,
+      d_allowed: 1048576,
+    };
+
+    const wrapper = mount(DiskUsageView);
+    const text = wrapper.text();
+    expect(text).toContain("1.0 MB");
+    expect(text).toContain("512.0 KB");
+  });
+
+  it("formats bytes correctly for TB-range values", () => {
+    const store = useDiskUsageStore();
+    store.loading = false;
+    store.usage = {
+      projects: [],
+      d_total: 2 * 1099511627776, // 2 TB
+      d_free: 1099511627776,      // 1 TB
+      d_boinc: 0,
+      d_allowed: 2 * 1099511627776,
+    };
+
+    const wrapper = mount(DiskUsageView);
+    const text = wrapper.text();
+    expect(text).toContain("2.0 TB");
+    expect(text).toContain("1.0 TB");
+  });
+
+  it("shows percentage in legend for project fractions", () => {
+    const diskStore = useDiskUsageStore();
+    diskStore.loading = false;
+    diskStore.usage = {
+      projects: [
+        { master_url: "https://a.org/", disk_usage: 1000 },
+        { master_url: "https://b.org/", disk_usage: 3000 },
+      ],
+      d_total: 10000,
+      d_free: 6000,
+      d_boinc: 4000,
+      d_allowed: 10000,
+    };
+
+    const wrapper = mount(DiskUsageView);
+    const text = wrapper.text();
+    // Project A: 1000/4000 = 25.0%, Project B: 3000/4000 = 75.0%
+    expect(text).toContain("25.0%");
+    expect(text).toContain("75.0%");
   });
 
   it("renders SVG doughnut chart paths for projects", () => {
