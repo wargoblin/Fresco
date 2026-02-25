@@ -15,7 +15,7 @@ export interface ManagerSettings {
 const STORAGE_KEY = "boinc-manager-settings";
 
 const defaults: ManagerSettings = {
-  language: "auto",
+  language: "en",
   theme: "system",
   reminderFrequency: "1d",
   showExitConfirmation: true,
@@ -28,7 +28,12 @@ const defaults: ManagerSettings = {
 function loadSettings(): ManagerSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...defaults, ...JSON.parse(raw) };
+    if (raw) {
+      const saved = { ...defaults, ...JSON.parse(raw) };
+      // Coerce legacy language values (auto/de/fr/…) to the only supported value
+      if (saved.language !== "en") saved.language = "en";
+      return saved;
+    }
   } catch {
     // Ignore corrupt localStorage
   }

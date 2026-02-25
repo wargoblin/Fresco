@@ -399,15 +399,7 @@ async function save() {
               <div class="manager-row">
                 <span class="manager-label">Language</span>
                 <select v-model="managerForm.language" class="manager-select">
-                  <option value="auto">Auto-detect</option>
                   <option value="en">English</option>
-                  <option value="de">Deutsch</option>
-                  <option value="fr">Français</option>
-                  <option value="es">Español</option>
-                  <option value="pt">Português</option>
-                  <option value="zh">中文</option>
-                  <option value="ja">日本語</option>
-                  <option value="ru">Русский</option>
                 </select>
               </div>
 
