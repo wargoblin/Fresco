@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import type { DataTableColumn } from "./DataTable.vue";
+import { useFocusTrap } from "../composables/useFocusTrap";
 
 const props = defineProps<{
   open: boolean;
@@ -12,6 +13,9 @@ const emit = defineEmits<{
   update: [keys: string[]];
   close: [];
 }>();
+
+const dialogRef = ref<HTMLElement | null>(null);
+useFocusTrap(dialogRef, () => props.open);
 
 const localKeys = ref<Set<string>>(new Set());
 
@@ -46,7 +50,7 @@ function save() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div class="dialog">
+      <div ref="dialogRef" class="dialog">
         <div class="dialog-header">
           <h3>Columns</h3>
           <button class="close-btn" @click="emit('close')">&times;</button>

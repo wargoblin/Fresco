@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import type { TaskResult, Project } from "../types/boinc";
 import { RESULT_STATE, ACTIVE_TASK_STATE, SCHEDULER_STATE } from "../types/boinc";
+import { useFocusTrap } from "../composables/useFocusTrap";
 
 const props = defineProps<{
   open: boolean;
@@ -11,6 +12,9 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ close: [] }>();
+
+const dialogRef = ref<HTMLElement | null>(null);
+useFocusTrap(dialogRef, () => props.open);
 
 // ── Formatting helpers ──────────────────────────────────────────
 
@@ -248,7 +252,7 @@ function copyAll() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div class="props-dialog">
+      <div ref="dialogRef" class="props-dialog">
         <div class="props-header">
           <h3>{{ dialogTitle }}</h3>
           <button class="close-btn" @click="emit('close')">&times;</button>

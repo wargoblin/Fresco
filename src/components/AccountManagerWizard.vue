@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { acctMgrInfo, acctMgrRpc, acctMgrRpcPoll } from "../composables/useRpc";
+import { useFocusTrap } from "../composables/useFocusTrap";
 import type { AcctMgrInfo } from "../types/boinc";
 import {
   BOINC_ERROR_IN_PROGRESS,
@@ -10,6 +11,9 @@ import {
 
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ close: [] }>();
+
+const dialogRef = ref<HTMLElement | null>(null);
+useFocusTrap(dialogRef, () => props.open);
 
 const step = ref<"form" | "processing" | "result">("form");
 const loading = ref(false);
@@ -132,7 +136,7 @@ function close() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="close">
-      <div class="wizard">
+      <div ref="dialogRef" class="wizard">
         <div class="wizard-header">
           <h3>
             {{

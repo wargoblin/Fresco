@@ -2,9 +2,13 @@
 import { ref, watch } from "vue";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { useManagerSettingsStore } from "../stores/managerSettings";
+import { useFocusTrap } from "../composables/useFocusTrap";
 
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ close: [] }>();
+
+const dialogRef = ref<HTMLElement | null>(null);
+useFocusTrap(dialogRef, () => props.open);
 
 const store = useManagerSettingsStore();
 const form = ref({ ...store.settings });
@@ -34,7 +38,7 @@ async function save() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div class="options-dialog">
+      <div ref="dialogRef" class="options-dialog">
         <div class="options-header">
           <h3>Manager Options</h3>
           <button class="close-btn" @click="emit('close')">&times;</button>

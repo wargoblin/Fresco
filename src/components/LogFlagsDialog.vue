@@ -2,9 +2,13 @@
 import { ref, watch } from "vue";
 import { getCcConfig, setCcConfig } from "../composables/useRpc";
 import type { CcConfig, LogFlags } from "../types/boinc";
+import { useFocusTrap } from "../composables/useFocusTrap";
 
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ close: [] }>();
+
+const dialogRef = ref<HTMLElement | null>(null);
+useFocusTrap(dialogRef, () => props.open);
 
 const loading = ref(false);
 const saving = ref(false);
@@ -65,7 +69,7 @@ async function save() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div class="logflags-dialog">
+      <div ref="dialogRef" class="logflags-dialog">
         <div class="logflags-header">
           <h3>Diagnostic Log Flags</h3>
           <button class="close-btn" @click="emit('close')">&times;</button>

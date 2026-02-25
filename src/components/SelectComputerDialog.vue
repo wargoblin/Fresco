@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { connect, connectLocal } from "../composables/useRpc";
+import { useFocusTrap } from "../composables/useFocusTrap";
 
-defineProps<{ open: boolean }>();
+const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ close: [] }>();
+
+const dialogRef = ref<HTMLElement | null>(null);
+useFocusTrap(dialogRef, () => props.open);
 
 const hostname = ref("localhost");
 const port = ref(31416);
@@ -41,7 +45,7 @@ async function doConnectLocal() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div class="dialog">
+      <div ref="dialogRef" class="dialog">
         <div class="dialog-header">
           <h3>Select Computer</h3>
           <button class="close-btn" @click="emit('close')">&times;</button>

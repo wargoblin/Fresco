@@ -2,9 +2,13 @@
 import { ref, watch } from "vue";
 import { getProxySettings, setProxySettings } from "../composables/useRpc";
 import type { ProxyInfo } from "../types/boinc";
+import { useFocusTrap } from "../composables/useFocusTrap";
 
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ close: [] }>();
+
+const dialogRef = ref<HTMLElement | null>(null);
+useFocusTrap(dialogRef, () => props.open);
 
 const activeTab = ref<"http" | "socks">("http");
 const loading = ref(false);
@@ -48,7 +52,7 @@ async function save() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div class="proxy-dialog">
+      <div ref="dialogRef" class="proxy-dialog">
         <div class="proxy-header">
           <h3>Proxy Settings</h3>
           <button class="close-btn" @click="emit('close')">&times;</button>

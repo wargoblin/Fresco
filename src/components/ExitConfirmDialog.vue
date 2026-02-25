@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useManagerSettingsStore } from "../stores/managerSettings";
+import { useFocusTrap } from "../composables/useFocusTrap";
 
-defineProps<{ open: boolean }>();
+const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{
   close: [];
   confirm: [shutdownClient: boolean];
 }>();
+
+const dialogRef = ref<HTMLElement | null>(null);
+useFocusTrap(dialogRef, () => props.open);
 
 const store = useManagerSettingsStore();
 const shutdownClient = ref(false);
@@ -23,7 +27,7 @@ function confirm() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div class="exit-dialog">
+      <div ref="dialogRef" class="exit-dialog">
         <h3>Exit BOINC Manager</h3>
         <p class="exit-message">
           Are you sure you want to exit? BOINC will continue running in the background.

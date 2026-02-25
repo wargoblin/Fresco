@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useFocusTrap } from "../composables/useFocusTrap";
 import {
   getAllProjectsList,
   lookupAccount,
@@ -20,8 +21,11 @@ import {
   ATTACH_POLL_DELAY_MS,
 } from "../constants/boinc";
 
-defineProps<{ open: boolean }>();
+const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ close: [] }>();
+
+const dialogRef = ref<HTMLElement | null>(null);
+useFocusTrap(dialogRef, () => props.open);
 
 const projects = useProjectsStore();
 
@@ -243,7 +247,7 @@ function close() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="close">
-      <div class="wizard">
+      <div ref="dialogRef" class="wizard">
         <div class="wizard-header">
           <h3>
             {{ step === 1 ? "Add Project"

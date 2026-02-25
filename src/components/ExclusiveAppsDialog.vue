@@ -2,9 +2,13 @@
 import { ref, watch } from "vue";
 import { getCcConfig, setCcConfig } from "../composables/useRpc";
 import type { CcConfig } from "../types/boinc";
+import { useFocusTrap } from "../composables/useFocusTrap";
 
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ close: [] }>();
+
+const dialogRef = ref<HTMLElement | null>(null);
+useFocusTrap(dialogRef, () => props.open);
 
 const loading = ref(false);
 const saving = ref(false);
@@ -105,7 +109,7 @@ async function save() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div class="exclusive-dialog">
+      <div ref="dialogRef" class="exclusive-dialog">
         <div class="exclusive-header">
           <h3>Exclusive Applications</h3>
           <button class="close-btn" @click="emit('close')">&times;</button>

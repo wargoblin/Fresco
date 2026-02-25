@@ -2,9 +2,13 @@
 import { ref, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useUpdateCheck, startBackgroundDownload } from "../composables/useUpdateCheck";
+import { useFocusTrap } from "../composables/useFocusTrap";
 
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ close: [] }>();
+
+const dialogRef = ref<HTMLElement | null>(null);
+useFocusTrap(dialogRef, () => props.open);
 
 const updating = ref(false);
 const updateError = ref("");
@@ -103,7 +107,7 @@ async function openGitHub() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div class="about-dialog">
+      <div ref="dialogRef" class="about-dialog">
         <div class="about-logo">
           <img src="/icon.png" alt="Fresco" width="64" height="64" />
         </div>

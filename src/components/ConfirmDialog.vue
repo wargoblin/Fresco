@@ -1,5 +1,8 @@
 <script setup lang="ts">
-defineProps<{
+import { ref } from "vue";
+import { useFocusTrap } from "../composables/useFocusTrap";
+
+const props = defineProps<{
   open: boolean;
   title: string;
   message: string;
@@ -10,12 +13,15 @@ const emit = defineEmits<{
   confirm: [];
   cancel: [];
 }>();
+
+const dialogRef = ref<HTMLElement | null>(null);
+useFocusTrap(dialogRef, () => props.open);
 </script>
 
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('cancel')">
-      <div class="dialog">
+      <div ref="dialogRef" class="dialog">
         <h3>{{ title }}</h3>
         <p>{{ message }}</p>
         <div class="dialog-actions">
