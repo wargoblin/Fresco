@@ -79,7 +79,7 @@ describe("MessagesView", () => {
     expect(wrapper.findAll("tbody tr")).toHaveLength(3);
 
     // Click "Errors" button
-    const typeButtons = wrapper.findAll(".type-btn");
+    const typeButtons = wrapper.findAll(".segment");
     const errorsBtn = typeButtons.find((b) => b.text() === "Errors");
     expect(errorsBtn).toBeTruthy();
     await errorsBtn!.trigger("click");
