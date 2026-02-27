@@ -72,7 +72,7 @@ export const useMessagesStore = defineStore("messages", () => {
         return;
       }
 
-      const startSeqno = Math.max(0, oldestSeqno - PAGE_SIZE);
+      const startSeqno = Math.max(0, oldestSeqno - PAGE_SIZE - 1);
       const older = await getMessages(startSeqno);
       const filtered = older.filter((m) => m.seqno < oldestSeqno);
 
