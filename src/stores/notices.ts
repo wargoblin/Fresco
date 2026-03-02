@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import { getNotices } from "../composables/useRpc";
 import { notifyNewNotices } from "../composables/useNotifications";
+import { useConnectionStore } from "./connection";
 import type { Notice } from "../types/boinc";
 
 const POLL_INTERVAL_MS = 30000;
@@ -24,7 +25,8 @@ export const useNoticesStore = defineStore("notices", () => {
         notifyNewNotices(newNotices.length);
       }
     } catch (e) {
-      error.value = String(e);
+      error.value = e instanceof Error ? e.message : String(e);
+      useConnectionStore().handleConnectionError();
     } finally {
       loading.value = false;
     }

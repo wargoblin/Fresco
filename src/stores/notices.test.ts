@@ -11,6 +11,11 @@ vi.mock("../composables/useNotifications", () => ({
   notifyNewNotices: vi.fn(),
 }));
 
+const mockHandleConnectionError = vi.fn();
+vi.mock("./connection", () => ({
+  useConnectionStore: () => ({ handleConnectionError: mockHandleConnectionError }),
+}));
+
 import { getNotices } from "../composables/useRpc";
 import { notifyNewNotices } from "../composables/useNotifications";
 
@@ -83,13 +88,14 @@ describe("useNoticesStore", () => {
     expect(mockNotify).not.toHaveBeenCalled();
   });
 
-  it("fetchNotices sets error on failure", async () => {
+  it("fetchNotices sets error and triggers reconnect on failure", async () => {
     mockGetNotices.mockRejectedValueOnce(new Error("Connection lost"));
     const store = useNoticesStore();
     await store.fetchNotices();
 
-    expect(store.error).toBe("Error: Connection lost");
+    expect(store.error).toBe("Connection lost");
     expect(store.loading).toBe(false);
+    expect(mockHandleConnectionError).toHaveBeenCalled();
   });
 
   it("polls and stops", async () => {

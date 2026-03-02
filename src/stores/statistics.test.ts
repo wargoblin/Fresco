@@ -7,6 +7,11 @@ vi.mock("../composables/useRpc", () => ({
   getStatistics: vi.fn(),
 }));
 
+const mockHandleConnectionError = vi.fn();
+vi.mock("./connection", () => ({
+  useConnectionStore: () => ({ handleConnectionError: mockHandleConnectionError }),
+}));
+
 import { getStatistics } from "../composables/useRpc";
 
 const mockGetStatistics = vi.mocked(getStatistics);
@@ -46,12 +51,13 @@ describe("useStatisticsStore", () => {
     expect(store.loading).toBe(false);
   });
 
-  it("fetchStatistics sets error on failure", async () => {
+  it("fetchStatistics sets error and triggers reconnect on failure", async () => {
     mockGetStatistics.mockRejectedValueOnce(new Error("Timeout"));
     const store = useStatisticsStore();
     await store.fetchStatistics();
-    expect(store.error).toBe("Error: Timeout");
+    expect(store.error).toBe("Timeout");
     expect(store.loading).toBe(false);
+    expect(mockHandleConnectionError).toHaveBeenCalled();
   });
 
   it("polls and stops", async () => {

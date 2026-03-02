@@ -7,6 +7,11 @@ vi.mock("../composables/useRpc", () => ({
   getDiskUsage: vi.fn(),
 }));
 
+const mockHandleConnectionError = vi.fn();
+vi.mock("./connection", () => ({
+  useConnectionStore: () => ({ handleConnectionError: mockHandleConnectionError }),
+}));
+
 import { getDiskUsage } from "../composables/useRpc";
 
 const mockGetDiskUsage = vi.mocked(getDiskUsage);
@@ -45,12 +50,13 @@ describe("useDiskUsageStore", () => {
     expect(store.loading).toBe(false);
   });
 
-  it("fetchDiskUsage sets error on failure", async () => {
+  it("fetchDiskUsage sets error and triggers reconnect on failure", async () => {
     mockGetDiskUsage.mockRejectedValueOnce(new Error("Network error"));
     const store = useDiskUsageStore();
     await store.fetchDiskUsage();
-    expect(store.error).toBe("Error: Network error");
+    expect(store.error).toBe("Network error");
     expect(store.loading).toBe(false);
+    expect(mockHandleConnectionError).toHaveBeenCalled();
   });
 
   it("polls and stops", async () => {

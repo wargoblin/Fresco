@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { getMessages, getMessageCount } from "../composables/useRpc";
+import { useConnectionStore } from "./connection";
 import type { Message } from "../types/boinc";
 
 const POLL_INTERVAL_MS = 5000;
@@ -54,7 +55,8 @@ export const useMessagesStore = defineStore("messages", () => {
         }
       }
     } catch (e) {
-      error.value = String(e);
+      error.value = e instanceof Error ? e.message : String(e);
+      useConnectionStore().handleConnectionError();
     } finally {
       loading.value = false;
     }
@@ -85,7 +87,8 @@ export const useMessagesStore = defineStore("messages", () => {
 
       hasMore.value = startSeqno > 0 && filtered.length > 0;
     } catch (e) {
-      error.value = String(e);
+      error.value = e instanceof Error ? e.message : String(e);
+      useConnectionStore().handleConnectionError();
     } finally {
       loadingMore.value = false;
     }

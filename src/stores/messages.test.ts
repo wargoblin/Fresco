@@ -8,6 +8,11 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
 }));
 
+const mockHandleConnectionError = vi.fn();
+vi.mock("./connection", () => ({
+  useConnectionStore: () => ({ handleConnectionError: mockHandleConnectionError }),
+}));
+
 import { invoke } from "@tauri-apps/api/core";
 
 const mockInvoke = vi.mocked(invoke);
@@ -177,7 +182,7 @@ describe("useMessagesStore", () => {
     expect(store.messages.length).toBeGreaterThan(beforeCount);
   });
 
-  it("sets error on RPC failure", async () => {
+  it("sets error and triggers reconnect on RPC failure", async () => {
     mockInvoke.mockRejectedValueOnce("Connection lost");
 
     const store = useMessagesStore();
@@ -185,6 +190,7 @@ describe("useMessagesStore", () => {
 
     expect(store.error).toBe("Connection lost");
     expect(store.messages).toEqual([]);
+    expect(mockHandleConnectionError).toHaveBeenCalled();
   });
 
   it("filteredMessages filters by search text", async () => {
