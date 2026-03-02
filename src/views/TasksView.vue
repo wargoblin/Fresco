@@ -466,7 +466,13 @@ function isColVisible(key: string): boolean {
         </td>
         <td v-if="isColVisible('project')" class="col-project" :title="task.project_url">{{ projectName(task.project_url) }}</td>
         <td v-if="isColVisible('progress')" class="col-progress">
-          <div class="progress-bar">
+          <div
+            class="progress-bar"
+            role="progressbar"
+            :aria-valuenow="Math.round(task.fraction_done * 100)"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
             <div
               class="progress-fill"
               :style="{ width: formatPercent(task.fraction_done) }"

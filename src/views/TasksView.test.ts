@@ -163,6 +163,18 @@ describe("TasksView", () => {
     expect(body).toContain("cannot be undone");
   });
 
+  it("progress bar has ARIA progressbar attributes", () => {
+    const store = useTasksStore();
+    store.tasks = [makeTask({ fraction_done: 0.456 })];
+
+    const wrapper = mount(TasksView);
+    const bar = wrapper.find(".progress-bar");
+    expect(bar.attributes("role")).toBe("progressbar");
+    expect(bar.attributes("aria-valuenow")).toBe("46");
+    expect(bar.attributes("aria-valuemin")).toBe("0");
+    expect(bar.attributes("aria-valuemax")).toBe("100");
+  });
+
   it("opens abort confirmation when Backspace is pressed with selection", async () => {
     const store = useTasksStore();
     store.tasks = [makeTask()];

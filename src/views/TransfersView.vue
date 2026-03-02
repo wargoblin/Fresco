@@ -305,7 +305,13 @@ function isColVisible(key: string): boolean {
         <td v-if="isColVisible('project')">{{ transfer.project_name }}</td>
         <td v-if="isColVisible('direction')">{{ transferDirection(transfer) }}</td>
         <td v-if="isColVisible('progress')" class="col-progress">
-          <div class="progress-bar">
+          <div
+            class="progress-bar"
+            role="progressbar"
+            :aria-valuenow="Math.round(transferProgress(transfer) * 100)"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
             <div
               class="progress-fill"
               :style="{ width: transferProgressText(transfer) }"
