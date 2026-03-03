@@ -3,7 +3,10 @@ import { nextTick, ref, watch } from "vue";
 import { onKeyStroke } from "@vueuse/core";
 import { useI18n } from "vue-i18n";
 import { invoke } from "@tauri-apps/api/core";
-import { useUpdateCheck, startBackgroundDownload } from "../composables/useUpdateCheck";
+import {
+  useUpdateCheck,
+  startBackgroundDownload,
+} from "../composables/useUpdateCheck";
 import { useFocusTrap } from "@vueuse/integrations/useFocusTrap";
 
 const props = defineProps<{ open: boolean }>();
@@ -11,10 +14,18 @@ const emit = defineEmits<{ close: [] }>();
 
 const dialogRef = ref<HTMLElement | null>(null);
 const { activate, deactivate } = useFocusTrap(dialogRef);
-watch(() => props.open, async (isOpen) => {
-  if (isOpen) { await nextTick(); if (!props.open) return; activate(); }
-  else { deactivate(); }
-});
+watch(
+  () => props.open,
+  async (isOpen) => {
+    if (isOpen) {
+      await nextTick();
+      if (!props.open) return;
+      activate();
+    } else {
+      deactivate();
+    }
+  },
+);
 
 const { t } = useI18n();
 const updating = ref(false);
@@ -119,16 +130,26 @@ async function openGitHub() {
 <template>
   <Teleport to="body">
     <div v-if="open" class="dialog-overlay" @click.self="emit('close')">
-      <div ref="dialogRef" class="about-dialog" role="dialog" aria-modal="true" aria-labelledby="about-dialog-title">
+      <div
+        ref="dialogRef"
+        class="about-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="about-dialog-title"
+      >
         <div class="about-logo">
           <img src="/icon.png" alt="Fresco" width="64" height="64" />
         </div>
-        <h3 id="about-dialog-title">{{ $t('about.title') }}</h3>
-        <p class="build-time">{{ $t('about.built', { time: formatBuildTime(buildTime) }) }}</p>
-        <p class="description">
-          {{ $t('about.description') }}
+        <h3 id="about-dialog-title">{{ $t("about.title") }}</h3>
+        <p class="build-time">
+          {{ $t("about.built", { time: formatBuildTime(buildTime) }) }}
         </p>
-        <button class="link-btn" @click="openGitHub">{{ $t('about.github') }}</button>
+        <p class="description">
+          {{ $t("about.description") }}
+        </p>
+        <button class="link-btn" @click="openGitHub">
+          {{ $t("about.github") }}
+        </button>
 
         <div class="update-section">
           <button
@@ -137,12 +158,14 @@ async function openGitHub() {
             :disabled="checking"
             @click="checkForUpdates(true)"
           >
-            {{ checking ? $t('about.checking') : $t('about.checkForUpdates') }}
+            {{ checking ? $t("about.checking") : $t("about.checkForUpdates") }}
           </button>
 
           <template v-if="updateAvailable">
             <p class="update-available">
-              {{ $t('about.updateAvailable', { date: formatDate(releaseDate) }) }}
+              {{
+                $t("about.updateAvailable", { date: formatDate(releaseDate) })
+              }}
             </p>
             <p v-if="updateError" class="update-error">{{ updateError }}</p>
             <div class="update-actions">
@@ -151,25 +174,32 @@ async function openGitHub() {
                 :disabled="updating || !assetUrl"
                 @click="updateNow"
               >
-                {{ updating ? $t('about.updating') : $t('about.updateNow') }}
+                {{ updating ? $t("about.updating") : $t("about.updateNow") }}
               </button>
               <button class="btn" :disabled="updating" @click="setUpdateOnExit">
-                {{ $t('about.updateOnExit') }}
+                {{ $t("about.updateOnExit") }}
               </button>
               <button class="btn" :disabled="updating" @click="dismissUpdate">
-                {{ $t('about.remindLater') }}
+                {{ $t("about.remindLater") }}
               </button>
             </div>
           </template>
 
-          <p v-else-if="buildTime && buildTime !== 'dev' && !checking && !checkError" class="up-to-date">
-            {{ $t('about.upToDate') }}
+          <p
+            v-else-if="
+              buildTime && buildTime !== 'dev' && !checking && !checkError
+            "
+            class="up-to-date"
+          >
+            {{ $t("about.upToDate") }}
           </p>
           <p v-if="checkError" class="update-error">{{ checkError }}</p>
         </div>
 
         <div class="about-footer">
-          <button class="btn" @click="emit('close')">{{ $t('about.close') }}</button>
+          <button class="btn" @click="emit('close')">
+            {{ $t("about.close") }}
+          </button>
         </div>
       </div>
     </div>
