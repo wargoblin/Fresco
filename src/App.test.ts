@@ -204,6 +204,72 @@ describe("App", () => {
     expect(texts).toContain("Preferences");
   });
 
+  it("Advanced toggle has aria-expanded attribute", async () => {
+    const router = createTestRouter();
+    await router.push("/tasks");
+    await router.isReady();
+
+    const conn = useConnectionStore();
+    conn.state = CONNECTION_STATE.CONNECTED;
+
+    const wrapper = await mountApp(router);
+
+    const advancedToggle = wrapper.find("button.nav-group-label");
+    expect(advancedToggle.exists()).toBe(true);
+    // Collapsed by default
+    expect(advancedToggle.attributes("aria-expanded")).toBe("false");
+  });
+
+  it("Advanced toggle expands on click and updates aria-expanded", async () => {
+    const router = createTestRouter();
+    await router.push("/tasks");
+    await router.isReady();
+
+    const conn = useConnectionStore();
+    conn.state = CONNECTION_STATE.CONNECTED;
+
+    const wrapper = await mountApp(router);
+
+    const advancedToggle = wrapper.find("button.nav-group-label");
+    expect(advancedToggle.attributes("aria-expanded")).toBe("false");
+
+    await advancedToggle.trigger("click");
+    expect(advancedToggle.attributes("aria-expanded")).toBe("true");
+  });
+
+  it("Advanced toggle is a <button> element (supports Enter/Space natively)", async () => {
+    const router = createTestRouter();
+    await router.push("/tasks");
+    await router.isReady();
+
+    const conn = useConnectionStore();
+    conn.state = CONNECTION_STATE.CONNECTED;
+
+    const wrapper = await mountApp(router);
+
+    const advancedToggle = wrapper.find("button.nav-group-label");
+    expect(advancedToggle.exists()).toBe(true);
+    expect(advancedToggle.element.tagName).toBe("BUTTON");
+  });
+
+  it("icon-only sidebar buttons have aria-label", async () => {
+    const router = createTestRouter();
+    await router.push("/tasks");
+    await router.isReady();
+
+    const conn = useConnectionStore();
+    conn.state = CONNECTION_STATE.CONNECTED;
+
+    const wrapper = await mountApp(router);
+
+    const actionButtons = wrapper.findAll(".sidebar-action-btn");
+    expect(actionButtons.length).toBe(2);
+
+    const labels = actionButtons.map((btn) => btn.attributes("aria-label"));
+    expect(labels).toContain("Select Computer");
+    expect(labels).toContain("Preferences");
+  });
+
   it("prevents Backspace on non-editable targets", async () => {
     const router = createTestRouter();
     await router.push("/tasks");

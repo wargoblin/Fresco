@@ -336,12 +336,16 @@ watch(
     <aside v-if="hasSidebar" class="sidebar" :class="{ open: sidebarOpen }">
       <nav class="sidebar-nav">
         <div v-for="group in navGroups" :key="group.key" class="nav-group">
-          <span
-            class="nav-group-label"
-            :class="{ clickable: group.collapsible }"
-            @click="group.collapsible && toggleCollapsed(group.key)"
+          <button
+            v-if="group.collapsible"
+            class="nav-group-label clickable"
+            :aria-expanded="!isCollapsed(group.key)"
+            @click="toggleCollapsed(group.key)"
           >
-            <span v-if="group.collapsible" class="nav-group-chevron" :class="{ collapsed: isCollapsed(group.key) }">&#9662;</span>
+            <span class="nav-group-chevron" :class="{ collapsed: isCollapsed(group.key) }">&#9662;</span>
+            {{ group.label }}
+          </button>
+          <span v-else class="nav-group-label">
             {{ group.label }}
           </span>
           <router-link
@@ -390,14 +394,14 @@ watch(
         <ActivityControls />
         <div class="sidebar-actions">
           <Tooltip :text="$t('sidebar.selectComputer')">
-            <button class="sidebar-action-btn" @click="showSelectComputer = true">
+            <button class="sidebar-action-btn" :aria-label="$t('sidebar.selectComputer')" @click="showSelectComputer = true">
               <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
                 <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm11 1H6v3h8V6zM6 15a1 1 0 100 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
               </svg>
             </button>
           </Tooltip>
           <Tooltip :text="$t('sidebar.preferences')">
-            <button class="sidebar-action-btn" @click="prefsInitialTab = 'computing'; showPreferences = true">
+            <button class="sidebar-action-btn" :aria-label="$t('sidebar.preferences')" @click="prefsInitialTab = 'computing'; showPreferences = true">
               <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
                 <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
               </svg>
@@ -561,7 +565,13 @@ input, textarea, select {
   margin-bottom: 2px;
 }
 
-.nav-group-label.clickable {
+button.nav-group-label.clickable {
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
   cursor: pointer;
   user-select: none;
   border-radius: var(--radius-sm);
