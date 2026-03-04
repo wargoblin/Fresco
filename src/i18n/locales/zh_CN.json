@@ -129,11 +129,11 @@
     },
     "resetDialog": {
       "title": "重置项目",
-      "message": "重置\u201c{names}\u201d？该项目的所有任务将会丢失。"
+      "message": "重置“{names}”？该项目的所有任务将会丢失。"
     },
     "detachDialog": {
       "title": "分离项目",
-      "message": "从\u201c{names}\u201d分离？你将停止为该项目贡献计算。"
+      "message": "从“{names}”分离？你将停止为该项目贡献计算。"
     },
     "toast": {
       "updated": "项目已更新",
@@ -187,7 +187,7 @@
     "filterAlerts": "用户警告",
     "filterErrors": "错误",
     "empty": "没有消息可显示。",
-    "loadingMore": "正在加载旧消息\u2026",
+    "loadingMore": "正在加载旧消息…",
     "col": {
       "time": "时间",
       "project": "项目",
@@ -209,7 +209,8 @@
     "totalDisk": "磁盘总量",
     "boincUsage": "BOINC 使用量",
     "freeSpace": "可用空间",
-    "allowed": "允许使用"
+    "allowed": "允许使用",
+    "chartLabel": "磁盘使用图表"
   },
   "host": {
     "title": "主机信息",
@@ -265,7 +266,8 @@
     "user": "用户",
     "host": "主机",
     "totalCredit": "总积分",
-    "avgCredit": "平均积分"
+    "avgCredit": "平均积分",
+    "chartLabel": "统计图表"
   },
   "notices": {
     "title": "通知",
@@ -431,7 +433,10 @@
     "net": "网络",
     "always": "总是提醒",
     "auto": "自动",
-    "suspend": "暂停"
+    "suspend": "暂停",
+    "cpuModeLabel": "CPU 模式",
+    "gpuModeLabel": "GPU 模式",
+    "netModeLabel": "网络模式"
   },
   "statusBar": {
     "connected": "已连接",

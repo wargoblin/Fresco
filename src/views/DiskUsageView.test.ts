@@ -169,6 +169,23 @@ describe("DiskUsageView", () => {
     expect(text).toContain("75.0%");
   });
 
+  it("doughnut SVG has role='img' and aria-label", () => {
+    const diskStore = useDiskUsageStore();
+    diskStore.loading = false;
+    diskStore.usage = {
+      projects: [{ master_url: "https://a.org/", disk_usage: 500 }],
+      d_total: 1000,
+      d_free: 500,
+      d_boinc: 500,
+      d_allowed: 1000,
+    };
+
+    const wrapper = mount(DiskUsageView);
+    const svg = wrapper.find("svg.doughnut-svg");
+    expect(svg.attributes("role")).toBe("img");
+    expect(svg.attributes("aria-label")).toBe("Disk usage chart");
+  });
+
   it("renders SVG doughnut chart paths for projects", () => {
     const diskStore = useDiskUsageStore();
     diskStore.loading = false;

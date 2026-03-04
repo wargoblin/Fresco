@@ -52,6 +52,15 @@ describe("ActivityControls", () => {
     expect(selects).toHaveLength(3);
   });
 
+  it("each select has an aria-label", () => {
+    const wrapper = mount(ActivityControls);
+    const selects = wrapper.findAll("select");
+
+    expect(selects[0].attributes("aria-label")).toBe("CPU mode");
+    expect(selects[1].attributes("aria-label")).toBe("GPU mode");
+    expect(selects[2].attributes("aria-label")).toBe("Network mode");
+  });
+
   it("displays current mode values", () => {
     const store = useClientStore();
     store.status = {

@@ -152,7 +152,7 @@ onUnmounted(() => {
         <div class="breakdown-section">
           <h3 class="section-title">{{ $t('disk.boincByProject') }}</h3>
           <div class="boinc-chart-card">
-            <svg width="240" height="240" viewBox="0 0 240 240" class="doughnut-svg">
+            <svg role="img" :aria-label="$t('disk.chartLabel')" width="240" height="240" viewBox="0 0 240 240" class="doughnut-svg">
               <path
                 v-for="(seg, i) in boincDoughnutPaths"
                 :key="i"

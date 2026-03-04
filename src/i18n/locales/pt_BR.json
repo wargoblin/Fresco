@@ -187,7 +187,7 @@
     "filterAlerts": "Alertas do usuário",
     "filterErrors": "Erros",
     "empty": "Nenhuma mensagem para exibir.",
-    "loadingMore": "Carregando mensagens anteriores\u2026",
+    "loadingMore": "Carregando mensagens anteriores…",
     "col": {
       "time": "Horário",
       "project": "Projeto",
@@ -209,7 +209,8 @@
     "totalDisk": "Disco total",
     "boincUsage": "Uso do BOINC",
     "freeSpace": "Espaço livre",
-    "allowed": "Permitido"
+    "allowed": "Permitido",
+    "chartLabel": "Gráfico de uso de disco"
   },
   "host": {
     "title": "Informações do computador",
@@ -265,7 +266,8 @@
     "user": "Usuário",
     "host": "Computador",
     "totalCredit": "Crédito total",
-    "avgCredit": "Crédito médio"
+    "avgCredit": "Crédito médio",
+    "chartLabel": "Gráfico de estatísticas"
   },
   "notices": {
     "title": "Avisos",
@@ -431,7 +433,10 @@
     "net": "Rede",
     "always": "sempre",
     "auto": "Automático",
-    "suspend": "Suspender"
+    "suspend": "Suspender",
+    "cpuModeLabel": "Modo da CPU",
+    "gpuModeLabel": "Modo da GPU",
+    "netModeLabel": "Modo de rede"
   },
   "statusBar": {
     "connected": "Conectado",

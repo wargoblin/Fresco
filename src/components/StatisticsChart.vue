@@ -176,6 +176,8 @@ const activeSeries = computed(() =>
     <h3 v-if="title" class="chart-title">{{ title }}</h3>
     <div ref="containerRef" class="chart-container">
       <svg
+        role="img"
+        :aria-label="title ?? $t('statistics.chartLabel')"
         :width="svgWidth"
         :height="svgHeight"
         class="chart-svg"
