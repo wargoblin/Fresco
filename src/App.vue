@@ -194,6 +194,10 @@ function cancelAutoConnect() {
   router.replace("/");
 }
 
+function skipToMain() {
+  document.getElementById("main-content")?.focus();
+}
+
 // ── Tauri event listeners for system tray ───────────────────────
 type UnlistenFn = () => void;
 const unlisteners: UnlistenFn[] = [];
@@ -383,6 +387,7 @@ watch(
     </div>
   </div>
   <div v-else class="app" :class="{ 'has-sidebar': hasSidebar }">
+    <a href="#main-content" class="skip-link" @click.prevent="skipToMain">{{ $t("app.skipToContent") }}</a>
     <button
       v-if="hasSidebar"
       class="hamburger-btn"
@@ -539,7 +544,7 @@ watch(
         </div>
       </div>
     </aside>
-    <main class="main-content" :style="{ '--status-bar-offset': hasStatusBar ? '28px' : '0px' }">
+    <main id="main-content" tabindex="-1" class="main-content" :style="{ '--status-bar-offset': hasStatusBar ? '28px' : '0px' }">
       <UpdateBanner v-if="updateAvailable && !dismissed" />
       <router-view />
     </main>
@@ -992,6 +997,31 @@ select {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ── Skip-to-content link (visible only on keyboard focus) ──── */
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: var(--z-modal);
+  padding: 8px 16px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus-visible {
+  top: 8px;
+}
+
+#main-content:focus {
+  outline: none;
 }
 
 /* ── Hamburger button (mobile only) ─────────────────────────── */
