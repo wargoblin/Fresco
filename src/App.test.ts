@@ -214,12 +214,37 @@ describe("App", () => {
     const conn = useConnectionStore();
     conn.state = CONNECTION_STATE.CONNECTED;
 
-    const wrapper = await mountApp(router);
+    const wrapper = mount(App, {
+      attachTo: document.body,
+      global: {
+        plugins: [router],
+        stubs: {
+          ActivityControls: stubComponent,
+          PreferencesDialog: stubComponent,
+          AboutDialog: stubComponent,
+          SelectComputerDialog: stubComponent,
+          ManagerOptionsDialog: stubComponent,
+          ExitConfirmDialog: stubComponent,
+          StatusBar: stubComponent,
+          ToastContainer: stubComponent,
+          UpdateBanner: stubComponent,
+        },
+      },
+    });
+    await flushPromises();
 
     const skipLink = wrapper.find("a.skip-link");
     expect(skipLink.exists()).toBe(true);
     expect(skipLink.attributes("href")).toBe("#main-content");
-    expect(wrapper.find("#main-content").exists()).toBe(true);
+
+    const mainContent = wrapper.find("#main-content");
+    expect(mainContent.exists()).toBe(true);
+    expect(mainContent.attributes("tabindex")).toBe("-1");
+
+    await skipLink.trigger("click");
+    expect(document.activeElement).toBe(mainContent.element);
+
+    wrapper.unmount();
   });
 
   it("prevents Backspace on non-editable targets", async () => {
