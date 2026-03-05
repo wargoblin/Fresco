@@ -7,6 +7,18 @@ use super::types::{
 };
 use super::xml_parse;
 
+/// Escape XML special characters in a string value.
+/// Only use for values inserted between XML tags, not for tag names.
+fn xml_escape(input: &str) -> String {
+    // `&` must be replaced first to avoid double-escaping
+    input
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
+}
+
 /// High-level RPC commands that return typed data.
 impl RpcClient {
     // ── Read operations ──────────────────────────────────────────────
@@ -44,8 +56,10 @@ impl RpcClient {
 
     /// Send a task operation identified by project URL and result name.
     async fn result_op(&self, op: &str, project_url: &str, name: &str) -> Result<(), String> {
+        let url = xml_escape(project_url);
+        let safe_name = xml_escape(name);
         let req = format!(
-            "<{op}>\n<project_url>{project_url}</project_url>\n<name>{name}</name>\n</{op}>"
+            "<{op}>\n<project_url>{url}</project_url>\n<name>{safe_name}</name>\n</{op}>"
         );
         let xml = self.rpc_call(&req).await?;
         xml_parse::parse_success(&xml)
@@ -67,8 +81,9 @@ impl RpcClient {
 
     /// Send a project operation identified by master URL.
     async fn project_op(&self, op: &str, project_url: &str) -> Result<(), String> {
+        let url = xml_escape(project_url);
         let req = format!(
-            "<{op}>\n<project_url>{project_url}</project_url>\n</{op}>"
+            "<{op}>\n<project_url>{url}</project_url>\n</{op}>"
         );
         let xml = self.rpc_call(&req).await?;
         xml_parse::parse_success(&xml)
@@ -136,8 +151,10 @@ impl RpcClient {
 
     /// Send a file transfer operation identified by project URL and filename.
     async fn transfer_op(&self, op: &str, project_url: &str, filename: &str) -> Result<(), String> {
+        let url = xml_escape(project_url);
+        let safe_filename = xml_escape(filename);
         let req = format!(
-            "<{op}>\n<project_url>{project_url}</project_url>\n<filename>{filename}</filename>\n</{op}>"
+            "<{op}>\n<project_url>{url}</project_url>\n<filename>{safe_filename}</filename>\n</{op}>"
         );
         let xml = self.rpc_call(&req).await?;
         xml_parse::parse_success(&xml)
@@ -242,11 +259,14 @@ impl RpcClient {
         email: &str,
         password: &str,
     ) -> Result<(), String> {
+        let safe_url = xml_escape(url);
+        let safe_email = xml_escape(email);
+        let safe_password = xml_escape(password);
         let req = format!(
             "<lookup_account>\n\
-             <url>{url}</url>\n\
-             <email_addr>{email}</email_addr>\n\
-             <passwd_hash>{password}</passwd_hash>\n\
+             <url>{safe_url}</url>\n\
+             <email_addr>{safe_email}</email_addr>\n\
+             <passwd_hash>{safe_password}</passwd_hash>\n\
              </lookup_account>"
         );
         self.rpc_call(&req).await?;
@@ -264,11 +284,14 @@ impl RpcClient {
         authenticator: &str,
         name: &str,
     ) -> Result<(), String> {
+        let safe_url = xml_escape(url);
+        let safe_auth = xml_escape(authenticator);
+        let safe_name = xml_escape(name);
         let req = format!(
             "<project_attach>\n\
-             <project_url>{url}</project_url>\n\
-             <authenticator>{authenticator}</authenticator>\n\
-             <project_name>{name}</project_name>\n\
+             <project_url>{safe_url}</project_url>\n\
+             <authenticator>{safe_auth}</authenticator>\n\
+             <project_name>{safe_name}</project_name>\n\
              </project_attach>"
         );
         self.rpc_call(&req).await?;
@@ -283,7 +306,8 @@ impl RpcClient {
     // ── Project config (Phase 4) ──────────────────────────────────
 
     pub async fn get_project_config(&self, url: &str) -> Result<(), String> {
-        let req = format!("<get_project_config>\n<url>{url}</url>\n</get_project_config>");
+        let safe_url = xml_escape(url);
+        let req = format!("<get_project_config>\n<url>{safe_url}</url>\n</get_project_config>");
         self.rpc_call(&req).await?;
         Ok(())
     }
@@ -301,13 +325,18 @@ impl RpcClient {
         user_name: &str,
         team_name: &str,
     ) -> Result<(), String> {
+        let safe_url = xml_escape(url);
+        let safe_email = xml_escape(email);
+        let safe_hash = xml_escape(passwd_hash);
+        let safe_user = xml_escape(user_name);
+        let safe_team = xml_escape(team_name);
         let req = format!(
             "<create_account>\n\
-             <url>{url}</url>\n\
-             <email_addr>{email}</email_addr>\n\
-             <passwd_hash>{passwd_hash}</passwd_hash>\n\
-             <user_name>{user_name}</user_name>\n\
-             <team_name>{team_name}</team_name>\n\
+             <url>{safe_url}</url>\n\
+             <email_addr>{safe_email}</email_addr>\n\
+             <passwd_hash>{safe_hash}</passwd_hash>\n\
+             <user_name>{safe_user}</user_name>\n\
+             <team_name>{safe_team}</team_name>\n\
              </create_account>"
         );
         self.rpc_call(&req).await?;
@@ -332,11 +361,14 @@ impl RpcClient {
         name: &str,
         password: &str,
     ) -> Result<(), String> {
+        let safe_url = xml_escape(url);
+        let safe_name = xml_escape(name);
+        let safe_password = xml_escape(password);
         let req = format!(
             "<acct_mgr_rpc>\n\
-             <url>{url}</url>\n\
-             <name>{name}</name>\n\
-             <password>{password}</password>\n\
+             <url>{safe_url}</url>\n\
+             <name>{safe_name}</name>\n\
+             <password>{safe_password}</password>\n\
              </acct_mgr_rpc>"
         );
         self.rpc_call(&req).await?;
@@ -432,7 +464,8 @@ impl RpcClient {
     // ── Language ────────────────────────────────────────────────
 
     pub async fn set_language(&self, lang: &str) -> Result<(), String> {
-        let req = format!("<set_language>\n<language>{lang}</language>\n</set_language>");
+        let safe_lang = xml_escape(lang);
+        let req = format!("<set_language>\n<language>{safe_lang}</language>\n</set_language>");
         let xml = self.rpc_call(&req).await?;
         xml_parse::parse_success(&xml)
     }
@@ -468,5 +501,58 @@ impl RpcClient {
     pub async fn get_daily_xfer_history(&self) -> Result<DailyXferHistory, String> {
         let xml = self.rpc_call("<get_daily_xfer_history/>").await?;
         Ok(xml_parse::parse_daily_xfer_history(&xml))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::xml_escape;
+
+    #[test]
+    fn no_special_characters() {
+        assert_eq!(xml_escape("hello world"), "hello world");
+    }
+
+    #[test]
+    fn escapes_ampersand() {
+        assert_eq!(xml_escape("a&b"), "a&amp;b");
+    }
+
+    #[test]
+    fn escapes_angle_brackets() {
+        assert_eq!(xml_escape("<script>"), "&lt;script&gt;");
+    }
+
+    #[test]
+    fn escapes_quotes() {
+        assert_eq!(xml_escape(r#"say "hello""#), "say &quot;hello&quot;");
+        assert_eq!(xml_escape("it's"), "it&apos;s");
+    }
+
+    #[test]
+    fn escapes_all_special_characters_together() {
+        assert_eq!(
+            xml_escape(r#"<a href="x">&'y'"#),
+            "&lt;a href=&quot;x&quot;&gt;&amp;&apos;y&apos;"
+        );
+    }
+
+    #[test]
+    fn empty_string() {
+        assert_eq!(xml_escape(""), "");
+    }
+
+    #[test]
+    fn no_double_escaping() {
+        // Already-escaped input should be escaped again (correct behavior)
+        assert_eq!(xml_escape("&amp;"), "&amp;amp;");
+    }
+
+    #[test]
+    fn url_with_ampersand() {
+        assert_eq!(
+            xml_escape("http://example.com?a=1&b=2"),
+            "http://example.com?a=1&amp;b=2"
+        );
     }
 }
