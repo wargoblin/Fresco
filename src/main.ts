@@ -31,4 +31,69 @@ async function bootstrap() {
   app.mount("#app");
 }
 
-bootstrap();
+bootstrap().catch((error: unknown) => {
+  console.error("[Fresco] bootstrap failed:", error);
+
+  const container = document.getElementById("app");
+  if (!container) return;
+
+  const message =
+    error instanceof Error ? error.message : "Unknown startup error";
+
+  // Build fallback error screen using safe DOM methods (no innerHTML)
+  const wrapper = document.createElement("div");
+  Object.assign(wrapper.style, {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100vh",
+    background: "#1a1a2e",
+    color: "#e0e0e0",
+    fontFamily: "system-ui, sans-serif",
+    padding: "2rem",
+  });
+
+  const card = document.createElement("div");
+  Object.assign(card.style, { maxWidth: "480px", textAlign: "center" });
+
+  const heading = document.createElement("h1");
+  Object.assign(heading.style, {
+    margin: "0 0 1rem",
+    fontSize: "1.5rem",
+    color: "#ff6b6b",
+  });
+  heading.textContent = "Failed to start Fresco";
+
+  const description = document.createElement("p");
+  Object.assign(description.style, { margin: "0 0 1.5rem", lineHeight: "1.6" });
+  description.textContent =
+    "The application could not initialize. Please try restarting. If the problem persists, report an issue on GitHub.";
+
+  const details = document.createElement("details");
+  Object.assign(details.style, {
+    textAlign: "left",
+    background: "#12121f",
+    borderRadius: "8px",
+    padding: "1rem",
+  });
+
+  const summary = document.createElement("summary");
+  Object.assign(summary.style, { cursor: "pointer", marginBottom: "0.5rem" });
+  summary.textContent = "Error details";
+
+  const pre = document.createElement("pre");
+  Object.assign(pre.style, {
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+    margin: "0",
+    fontSize: "0.85rem",
+    color: "#ccc",
+  });
+  pre.textContent = message;
+
+  details.append(summary, pre);
+  card.append(heading, description, details);
+  wrapper.append(card);
+
+  container.replaceChildren(wrapper);
+});
