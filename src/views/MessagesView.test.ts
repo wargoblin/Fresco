@@ -21,10 +21,18 @@ function makeMessage(overrides: Partial<Message> = {}): Message {
   };
 }
 
+const writeText = vi.fn().mockResolvedValue(undefined);
+Object.defineProperty(navigator, "clipboard", {
+  value: { writeText },
+  writable: true,
+  configurable: true,
+});
+
 describe("MessagesView", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     localStorage.clear();
+    writeText.mockClear();
   });
 
   it("renders messages in chronological order by default (oldest first)", () => {
@@ -124,5 +132,98 @@ describe("MessagesView", () => {
     expect(labels).toContain("Info");
     expect(labels).toContain("Alert");
     expect(labels).toContain("Error");
+  });
+
+  it("Copy All respects active type filter", async () => {
+    const store = useMessagesStore();
+    store.messages = [
+      makeMessage({
+        seqno: 1,
+        priority: MSG_PRIORITY.INFO,
+        body: "Info msg",
+        timestamp: 1000,
+      }),
+      makeMessage({
+        seqno: 2,
+        priority: MSG_PRIORITY.USER_ALERT,
+        body: "Alert msg",
+        timestamp: 2000,
+      }),
+      makeMessage({
+        seqno: 3,
+        priority: MSG_PRIORITY.INTERNAL_ERROR,
+        body: "Error msg",
+        timestamp: 3000,
+      }),
+    ];
+
+    const wrapper = mount(MessagesView);
+
+    // Switch to "Errors" filter
+    const errorsBtn = wrapper
+      .findAll(".segment")
+      .find((b) => b.text() === "Errors");
+    await errorsBtn!.trigger("click");
+
+    // Click Copy All (no selection)
+    const copyBtn = wrapper
+      .findAll(".btn")
+      .find((b) => b.text().includes("Copy"));
+    await copyBtn!.trigger("click");
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    const copied = writeText.mock.calls[0][0] as string;
+    expect(copied).toContain("Error msg");
+    expect(copied).not.toContain("Info msg");
+    expect(copied).not.toContain("Alert msg");
+  });
+
+  it("Copy Selected only copies selected rows within filtered set", async () => {
+    const store = useMessagesStore();
+    store.messages = [
+      makeMessage({
+        seqno: 1,
+        priority: MSG_PRIORITY.INTERNAL_ERROR,
+        body: "Error one",
+        timestamp: 1000,
+      }),
+      makeMessage({
+        seqno: 2,
+        priority: MSG_PRIORITY.INTERNAL_ERROR,
+        body: "Error two",
+        timestamp: 2000,
+      }),
+      makeMessage({
+        seqno: 3,
+        priority: MSG_PRIORITY.INFO,
+        body: "Info msg",
+        timestamp: 3000,
+      }),
+    ];
+
+    const wrapper = mount(MessagesView);
+
+    // Switch to "Errors" filter
+    const errorsBtn = wrapper
+      .findAll(".segment")
+      .find((b) => b.text() === "Errors");
+    await errorsBtn!.trigger("click");
+
+    // Select first error row by clicking it
+    const rows = wrapper.findAll("tbody tr");
+    expect(rows).toHaveLength(2);
+    await rows[0].trigger("click");
+
+    // Click Copy Selected
+    const copyBtn = wrapper
+      .findAll(".btn")
+      .find((b) => b.text().includes("Copy"));
+    await copyBtn!.trigger("click");
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    const copied = writeText.mock.calls[0][0] as string;
+    expect(copied).toContain("Error one");
+    expect(copied).not.toContain("Error two");
+    expect(copied).not.toContain("Info msg");
   });
 });

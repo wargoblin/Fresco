@@ -171,10 +171,11 @@ function formatMessage(m: {
 }
 
 async function copySelectedToClipboard() {
+  const visible = filteredByType.value;
   const msgs =
     selectedSeqnos.value.size > 0
-      ? store.filteredMessages.filter((m) => selectedSeqnos.value.has(m.seqno))
-      : store.filteredMessages;
+      ? visible.filter((m) => selectedSeqnos.value.has(m.seqno))
+      : visible;
   const text = msgs.map(formatMessage).join("\n");
   try {
     await navigator.clipboard.writeText(text);
