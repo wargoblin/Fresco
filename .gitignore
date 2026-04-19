@@ -76,3 +76,7 @@ build/
 coverage/
 .eslintcache
 .npm/
+
+# Local IDE skill mirrors (Cursor + Codex zeркало для Claude Code skills)
+.cursor/skills/
+.codex/skills/
