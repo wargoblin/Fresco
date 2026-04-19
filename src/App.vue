@@ -233,14 +233,32 @@ async function handleTakeover() {
     await invoke("disable_boinc_manager_autostart", { info });
     toastStore.show(t("onboarding.takeover.successToast"), "success");
   } catch (err) {
-    const message = String(err);
-    if (message === "manual" && info.kind === "MacLoginItem") {
-      try {
-        await invoke("open_login_items_settings");
-      } catch {
-        // Ignore — the instructional toast still points the user at the setting.
+    const message = String(err).replace(/^Error:\s*/, "");
+    if (message === "manual") {
+      if (info.kind === "MacLoginItem") {
+        // macOS SMAppService Login Items can't be toggled by third-party apps;
+        // point the user at the exact System Settings pane.
+        try {
+          await invoke("open_login_items_settings");
+        } catch {
+          // Ignore — the instructional toast still points the user at the setting.
+        }
+        toastStore.show(t("onboarding.takeover.manualToast"), "info", 8000);
+      } else if (
+        info.kind === "LinuxAutostart" &&
+        info.data.system_wide
+      ) {
+        // /etc/xdg/autostart can only be edited with root; show the path.
+        toastStore.show(
+          t("onboarding.takeover.linuxManualToast", {
+            path: info.data.desktop_path,
+          }),
+          "info",
+          10000,
+        );
+      } else {
+        toastStore.show(t("onboarding.takeover.errorToast"), "error");
       }
-      toastStore.show(t("onboarding.takeover.manualToast"), "info", 8000);
     } else {
       toastStore.show(t("onboarding.takeover.errorToast"), "error");
     }

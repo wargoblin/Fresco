@@ -977,12 +977,14 @@ fn mac_launchagent_dirs() -> Vec<std::path::PathBuf> {
 
 #[cfg(target_os = "linux")]
 fn linux_autostart_dirs() -> Vec<(std::path::PathBuf, bool)> {
-    let mut dirs = vec![
-        (std::path::PathBuf::from("/etc/xdg/autostart"), true),
-    ];
+    // User-level entries are preferred over system-wide because we can
+    // disable them without root. Detection stops at the first match,
+    // so order matters.
+    let mut dirs = Vec::new();
     if let Some(home) = std::env::var_os("HOME") {
         dirs.push((std::path::PathBuf::from(home).join(".config/autostart"), false));
     }
+    dirs.push((std::path::PathBuf::from("/etc/xdg/autostart"), true));
     dirs
 }
 

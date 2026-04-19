@@ -718,6 +718,7 @@
       "keepBoth": "Оставить оба",
       "successToast": "Автозапуск BOINC Manager отключён.",
       "manualToast": "Открыли системные настройки — снимите «BOINCManager» в пункте автозапуска.",
+      "linuxManualToast": "Автозапуск задан на уровне системы ({path}) — удалите файл с правами root.",
       "errorToast": "Не удалось отключить автозапуск BOINC Manager."
     }
   }

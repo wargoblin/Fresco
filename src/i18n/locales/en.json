@@ -718,6 +718,7 @@
       "keepBoth": "Keep both",
       "successToast": "BOINC Manager autostart disabled.",
       "manualToast": "Opened System Settings — turn off \"BOINCManager\" under Login Items.",
+      "linuxManualToast": "System-wide autostart at {path} — remove it as root to disable.",
       "errorToast": "Could not disable BOINC Manager autostart."
     }
   }
