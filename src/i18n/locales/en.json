@@ -707,5 +707,19 @@
     "newNoticesBody": "{count} new notice | {count} new notices",
     "connectionLostTitle": "Connection Lost",
     "connectionLostBody": "Lost connection to the BOINC client."
+  },
+  "onboarding": {
+    "takeover": {
+      "title": "Use Fresco as your BOINC manager?",
+      "lead": "We detected the official BOINC Manager set to start with your computer.",
+      "explanation": "Fresco and the BOINC Manager share the same computing engine, so only one is needed. We can turn off the Manager's autostart — your projects and progress stay untouched.",
+      "macLoginItemNote": "On this macOS version, login items must be turned off by hand. We'll open the right settings page for you.",
+      "useFrescoOnly": "Use Fresco only",
+      "keepBoth": "Keep both",
+      "successToast": "BOINC Manager autostart disabled.",
+      "manualToast": "Opened System Settings — turn off \"BOINCManager\" under Login Items.",
+      "linuxManualToast": "System-wide autostart at {path} — remove it as root to disable.",
+      "errorToast": "Could not disable BOINC Manager autostart."
+    }
   }
 }

@@ -707,5 +707,19 @@
     "newNoticesBody": "{count} новое уведомление | {count} новых уведомления | {count} новых уведомлений",
     "connectionLostTitle": "Соединение потеряно",
     "connectionLostBody": "Потеряно соединение с клиентом BOINC."
+  },
+  "onboarding": {
+    "takeover": {
+      "title": "Сделать Fresco вашим менеджером BOINC?",
+      "lead": "Мы обнаружили, что официальный BOINC Manager стартует вместе с системой.",
+      "explanation": "Fresco и BOINC Manager работают с одним и тем же вычислительным клиентом, второй GUI не нужен. Мы можем отключить автозапуск Manager — проекты и прогресс останутся на месте.",
+      "macLoginItemNote": "В этой версии macOS пункты автозапуска отключаются вручную. Мы откроем нужный раздел системных настроек.",
+      "useFrescoOnly": "Оставить только Fresco",
+      "keepBoth": "Оставить оба",
+      "successToast": "Автозапуск BOINC Manager отключён.",
+      "manualToast": "Открыли системные настройки — снимите «BOINCManager» в пункте автозапуска.",
+      "linuxManualToast": "Автозапуск задан на уровне системы ({path}) — удалите файл с правами root.",
+      "errorToast": "Не удалось отключить автозапуск BOINC Manager."
+    }
   }
 }

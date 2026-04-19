@@ -11,6 +11,8 @@ export interface ManagerSettings {
   minimizeToTrayOnClose: boolean;
   startMinimizedToTray: boolean;
   checkForUpdates: boolean;
+  /** Whether the user has seen the first-run BOINC Manager takeover prompt. */
+  onboardingCompleted: boolean;
 }
 
 const STORAGE_KEY = "boinc-manager-settings";
@@ -24,6 +26,7 @@ const defaults: ManagerSettings = {
   minimizeToTrayOnClose: true,
   startMinimizedToTray: false,
   checkForUpdates: true,
+  onboardingCompleted: false,
 };
 
 async function applyTheme(theme: ManagerSettings["theme"]) {
