@@ -32,6 +32,9 @@ import { useNoticesStore } from "./stores/notices";
 import { useDiskUsageStore } from "./stores/diskUsage";
 import { usePreferencesStore } from "./stores/preferences";
 import { useManagerSettingsStore } from "./stores/managerSettings";
+import { useToastStore } from "./stores/toast";
+import OnboardingTakeoverDialog from "./components/OnboardingTakeoverDialog.vue";
+import type { ManagerAutostartInfo } from "./types/boinc";
 import {
   setRunMode,
   setGpuMode,
@@ -53,7 +56,8 @@ const messagesStore = useMessagesStore();
 const noticesStore = useNoticesStore();
 const diskUsageStore = useDiskUsageStore();
 const preferencesStore = usePreferencesStore();
-useManagerSettingsStore(); // Initialize early to apply theme before ConnectView renders
+const managerSettingsStore = useManagerSettingsStore(); // Initialize early to apply theme before ConnectView renders
+const toastStore = useToastStore();
 const showPreferences = ref(false);
 const showAbout = ref(false);
 const showSelectComputer = ref(false);
@@ -174,6 +178,7 @@ async function autoConnect() {
 
   if (connection.state === CONNECTION_STATE.CONNECTED) {
     startAllPolling();
+    await runOnboardingIfNeeded();
     router.push("/tasks");
     invoke("cleanup_old_binary").catch(() => {});
   } else {
@@ -181,6 +186,71 @@ async function autoConnect() {
     router.replace("/");
   }
   initializing.value = false;
+}
+
+// ── BOINC Manager takeover onboarding ───────────────────────────
+
+const onboardingInfo = ref<ManagerAutostartInfo | null>(null);
+const showOnboarding = ref(false);
+let onboardingResolver: (() => void) | null = null;
+
+async function runOnboardingIfNeeded() {
+  if (managerSettingsStore.settings.onboardingCompleted) return;
+
+  let info: ManagerAutostartInfo | null = null;
+  try {
+    info = await invoke("detect_boinc_manager_autostart");
+  } catch {
+    // Detection is best-effort — a failure shouldn't block the app.
+    managerSettingsStore.settings.onboardingCompleted = true;
+    return;
+  }
+
+  if (!info) {
+    managerSettingsStore.settings.onboardingCompleted = true;
+    return;
+  }
+
+  onboardingInfo.value = info;
+  showOnboarding.value = true;
+  loadingStatus.value = "";
+
+  await new Promise<void>((resolve) => {
+    onboardingResolver = resolve;
+  });
+  onboardingResolver = null;
+  managerSettingsStore.settings.onboardingCompleted = true;
+}
+
+async function handleTakeover() {
+  const info = onboardingInfo.value;
+  showOnboarding.value = false;
+  if (!info) {
+    onboardingResolver?.();
+    return;
+  }
+  try {
+    await invoke("disable_boinc_manager_autostart", { info });
+    toastStore.show(t("onboarding.takeover.successToast"), "success");
+  } catch (err) {
+    const message = String(err);
+    if (message === "manual" && info.kind === "MacLoginItem") {
+      try {
+        await invoke("open_login_items_settings");
+      } catch {
+        // Ignore — the instructional toast still points the user at the setting.
+      }
+      toastStore.show(t("onboarding.takeover.manualToast"), "info", 8000);
+    } else {
+      toastStore.show(t("onboarding.takeover.errorToast"), "error");
+    }
+  }
+  onboardingResolver?.();
+}
+
+function handleKeepBoth() {
+  showOnboarding.value = false;
+  onboardingResolver?.();
 }
 
 function cancelAutoConnect() {
@@ -578,6 +648,12 @@ watch(
       v-if="showAcctMgr"
       :open="showAcctMgr"
       @close="showAcctMgr = false"
+    />
+    <OnboardingTakeoverDialog
+      :open="showOnboarding"
+      :info="onboardingInfo"
+      @takeover="handleTakeover"
+      @keep-both="handleKeepBoth"
     />
     <ToastContainer />
   </div>
