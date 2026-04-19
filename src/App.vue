@@ -178,14 +178,19 @@ async function autoConnect() {
 
   if (connection.state === CONNECTION_STATE.CONNECTED) {
     startAllPolling();
-    await runOnboardingIfNeeded();
     router.push("/tasks");
+    // Flip out of the loading screen BEFORE awaiting onboarding —
+    // the dialog is mounted only inside the v-else branch, so leaving
+    // `initializing` true would mean the dialog never renders and the
+    // await below would hang the startup flow forever.
+    initializing.value = false;
+    await runOnboardingIfNeeded();
     invoke("cleanup_old_binary").catch(() => {});
   } else {
     // Auto-connect failed — show ConnectView
     router.replace("/");
+    initializing.value = false;
   }
-  initializing.value = false;
 }
 
 // ── BOINC Manager takeover onboarding ───────────────────────────
