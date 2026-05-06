@@ -61,15 +61,18 @@ fi
 
 ### 3. Ожидание и проверка
 
-**Bounded polling loop:** опрашивай каждые 60 секунд, до 10 попыток. Если reviewer ответил на 1-й минуте — не жди оставшиеся. Если не ответил за 10 минут — продолжай без ошибки.
+Не запускай локальный blocking `sleep`/`gh api` loop. Для каждого выбранного reviewer используй `/wait-bot-review` или Monitor-backed equivalent; ожидание должно завершаться при первом сигнале reviewer'а или по timeout.
 
-```bash
-for attempt in $(seq 1 10); do
-  sleep 60
-  # проверь каналы Codex и выбранного Claude ниже
-  # если все выбранные reviewer'ы ответили → break
-done
+```text
+/wait-bot-review wargoblin/Fresco <review-pr-номер> chatgpt-codex-connector[bot] 30m
+
+# medium/max only:
+/wait-bot-review wargoblin/Fresco <review-pr-номер> claude 30m
 ```
+
+Если доступная реализация `/wait-bot-review` поддерживает только exact issue-comment/review logins, для Claude regex/check-run каналов используй Monitor-backed equivalent. Не возвращайся к локальному blocking loop.
+
+После notification/timeout проверь каналы ниже. Если выбранный reviewer не ответил в timeout, зафиксируй unavailable и продолжай без ошибки.
 
 **Codex использует ТРИ канала ответа — проверяй ВСЕ:**
 
@@ -148,7 +151,7 @@ gh pr comment <review-pr-номер> --repo wargoblin/Fresco --body "Declined: <
 
 Сообщи пользователю: что было → почему отклонили.
 
-**После каждого push** — запомни baseline counts для всех выбранных каналов до re-request, снова polling (60с × 10 попыток) и считай новыми только artifacts/comments с count выше baseline. Для medium/max повторно оставь top-level comment:
+**После каждого push** — запомни baseline counts для всех выбранных каналов до re-request, снова запусти `/wait-bot-review` / Monitor-backed wait для выбранного reviewer и считай новыми только artifacts/comments с count выше baseline. Для medium/max повторно оставь top-level comment:
 
 ```bash
 if [ "$REVIEW_LEVEL" != "simple" ]; then

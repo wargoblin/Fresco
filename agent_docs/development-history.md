@@ -9,6 +9,17 @@
 
 ## Записи
 
+## [2026-05-06] - R-52: Fresco PR skills moved to /wait-bot-review
+
+### Что сделано
+- В ветке `feat/macos-developer-id-signing` обновлены локальные PR skills `.claude/skills/pr-review/SKILL.md` и `.claude/skills/pr-submit/SKILL.md`.
+- Старые bounded `sleep` polling loops заменены на `/wait-bot-review` / Monitor-backed wait для выбранных reviewers.
+- Сохранены reviewer channels: internal Codex review (`chatgpt-codex-connector[bot]`), upstream Copilot (`copilot-pull-request-reviewer[bot]` + inline `Copilot`), Claude Code Review для medium/max.
+
+### Проверка
+- `rg "sleep 60|for attempt in \\$\\(seq|Bounded polling loop" .claude/skills/pr-review/SKILL.md .claude/skills/pr-submit/SKILL.md` — 0 совпадений.
+- `git diff --check` — clean.
+
 ## [2026-04-19] - PR: BOINC first-run onboarding (takeover + install)
 
 ### Что сделано

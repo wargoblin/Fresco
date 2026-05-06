@@ -136,15 +136,19 @@ fi
 
 ### 4. Дождись selected review
 
-**Bounded polling loop:** опрашивай каждые 60 секунд, до 10 попыток. Если reviewer ответил на 1-й минуте — не жди оставшиеся. Если не ответил за 10 минут — продолжай без ошибки.
+Не запускай локальный blocking `sleep`/`gh api` loop. Для каждого выбранного reviewer используй `/wait-bot-review` или Monitor-backed equivalent; ожидание должно завершаться при первом сигнале reviewer'а или по timeout.
 
-```bash
-for attempt in $(seq 1 10); do
-  sleep 60
-  # проверь каналы Copilot и выбранного Claude ниже
-  # если все выбранные reviewers ответили → break
-done
+```text
+/wait-bot-review AufarZakiev/Fresco <upstream-pr-номер> copilot-pull-request-reviewer[bot] 30m
+/wait-bot-review AufarZakiev/Fresco <upstream-pr-номер> Copilot 30m
+
+# medium/max only:
+/wait-bot-review AufarZakiev/Fresco <upstream-pr-номер> claude 30m
 ```
+
+Если доступная реализация `/wait-bot-review` поддерживает только exact issue-comment/review logins, для Copilot inline comments (`Copilot`) и Claude regex/check-run каналов используй Monitor-backed equivalent. Не возвращайся к локальному blocking loop.
+
+После notification/timeout проверь каналы ниже. Если выбранный reviewer не ответил в timeout, зафиксируй unavailable и продолжай без ошибки.
 
 **Copilot использует два username — проверяй ОБА:**
 
@@ -189,7 +193,7 @@ gh pr view <номер> --repo AufarZakiev/Fresco --json statusCheckRollup \
 - **Не валидно** → объяснить пользователю почему отклонено
 - **Уже исправлено** (stale comment на старый код) → пропустить, сообщить пользователю
 
-**После каждого push** — перезапроси Copilot и выбранный Claude review (шаг 3) и polling заново (шаг 4).
+**После каждого push** — перезапроси Copilot и выбранный Claude review (шаг 3), затем снова запусти `/wait-bot-review` / Monitor-backed wait (шаг 4).
 
 Перед re-request после push запомни baseline counts по reviews, inline comments, issue comments и Claude check runs. После re-request считай новыми только artifacts/comments с count выше baseline, чтобы старые review comments не засчитывались как повторный результат. Ultrareview после fix-push автоматически не перезапускай; запускай снова только по явной просьбе пользователя.
 
