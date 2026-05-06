@@ -1,13 +1,29 @@
 use quick_xml::events::Event;
 use quick_xml::Reader;
 
+use std::collections::HashMap;
+
 use super::types::{
     AccountOut, AcctMgrInfo, AcctMgrRpcReply, CcConfig, CcState, CcStatus, Coproc, DailyStats,
     DailyXfer, DailyXferHistory, DayOfWeekPrefs, DiskUsage, DiskUsageProject, FileTransfer,
     GlobalPreferences, GuiUrl, HostInfo, LogFlags, Message, NewerVersionInfo, Notice, OldResult,
     Project, ProjectAttachReply, ProjectConfig, ProjectInitStatus, ProjectListEntry,
-    ProjectStatistics, ProxyInfo, TaskResult, VersionInfo, WslDistro,
+    ProjectStatistics, ProxyInfo, TaskResult, VersionInfo, WorkunitApp, WslDistro,
 };
+
+/// Escape a string for embedding as XML element text.
+fn escape_xml_text(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
 
 /// Extract text content of an XML element, advancing the reader past its end tag.
 /// Handles both regular text and CDATA sections.
@@ -304,6 +320,9 @@ pub fn parse_projects(xml: &str) -> Vec<Project> {
                                     text.parse().unwrap_or(0);
                             }
                             "venue" => current.venue = text,
+                            "suspended_via_gui" => current.suspended_via_gui = true,
+                            "dont_request_more_work" => current.dont_request_more_work = true,
+                            "attached_via_acct_mgr" => current.attached_via_acct_mgr = true,
                             _ => {}
                         }
                     }
@@ -419,6 +438,10 @@ pub fn parse_cc_status(xml: &str) -> CcStatus {
                                 status.max_event_log_lines =
                                     text.parse().unwrap_or(0);
                             }
+                            "ams_password_error" => status.ams_password_error = true,
+                            "manager_must_quit" => status.manager_must_quit = true,
+                            "disallow_attach" => status.disallow_attach = true,
+                            "simple_gui_only" => status.simple_gui_only = true,
                             _ => {}
                         }
                     }
@@ -744,6 +767,7 @@ pub fn parse_notices(xml: &str) -> Vec<Notice> {
                             "project_name" => current.project_name = text,
                             "link" => current.link = text,
                             "category" => current.category = text,
+                            "is_private" => current.is_private = true,
                             _ => {}
                         }
                     }
@@ -994,6 +1018,10 @@ pub fn parse_global_preferences(xml: &str) -> GlobalPreferences {
                                 prefs.vm_max_used_frac =
                                     text.parse().unwrap_or(0.0)
                             }
+                            "dont_verify_images" => prefs.dont_verify_images = true,
+                            "confirm_before_connecting" => prefs.confirm_before_connecting = true,
+                            "hangup_if_dialed" => prefs.hangup_if_dialed = true,
+                            "network_wifi_only" => prefs.network_wifi_only = true,
                             _ => {}
                         }
                     }
@@ -1194,10 +1222,10 @@ pub fn parse_host_info(xml: &str) -> HostInfo {
                                     current_coproc.driver_version = format!("{major}.{minor:02}");
                                 }
                             }
-                            "driver_version" | "display_driver_version" => {
-                                if current_coproc.driver_version.is_empty() {
-                                    current_coproc.driver_version = text;
-                                }
+                            "driver_version" | "display_driver_version"
+                                if current_coproc.driver_version.is_empty() =>
+                            {
+                                current_coproc.driver_version = text;
                             }
                             // CUDA XML uses cudaVersion
                             "cudaVersion" | "cuda_version" => {
@@ -1267,6 +1295,7 @@ pub fn parse_host_info(xml: &str) -> HostInfo {
                             "p_calculated" => info.p_calculated = text.parse().unwrap_or(0.0),
                             "mac_address" => info.mac_address = text,
                             "docker_version" => info.docker_version = text,
+                            "p_vm_extensions_disabled" => info.p_vm_extensions_disabled = true,
                             _ => {}
                         }
                     }
@@ -1282,17 +1311,13 @@ pub fn parse_host_info(xml: &str) -> HostInfo {
             Ok(Event::End(ref e)) => {
                 let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
                 match tag.as_str() {
-                    "coproc_cuda" | "coproc_opencl" => {
-                        if in_coproc {
-                            info.coprocs.push(current_coproc.clone());
-                            in_coproc = false;
-                        }
+                    "coproc_cuda" | "coproc_opencl" if in_coproc => {
+                        info.coprocs.push(current_coproc.clone());
+                        in_coproc = false;
                     }
-                    "distro" => {
-                        if in_distro {
-                            info.wsl_distros.push(current_distro.clone());
-                            in_distro = false;
-                        }
+                    "distro" if in_distro => {
+                        info.wsl_distros.push(current_distro.clone());
+                        in_distro = false;
                     }
                     "wsl" => {
                         in_wsl = false;
@@ -1491,6 +1516,13 @@ pub fn parse_project_config(xml: &str) -> ProjectConfig {
                                 config.min_passwd_length = text.parse().unwrap_or(0)
                             }
                             "terms_of_use" => config.terms_of_use = text,
+                            "account_creation_disabled" => config.account_creation_disabled = true,
+                            "client_account_creation_disabled" => config.client_account_creation_disabled = true,
+                            "uses_username" => config.uses_username = true,
+                            "terms_of_use_is_html" => config.terms_of_use_is_html = true,
+                            "ldap_auth" => config.ldap_auth = true,
+                            "sched_stopped" => config.sched_stopped = true,
+                            "web_stopped" => config.web_stopped = true,
                             _ => {}
                         }
                     }
@@ -1547,6 +1579,7 @@ pub fn parse_acct_mgr_info(xml: &str) -> AcctMgrInfo {
                         match tag.as_str() {
                             "acct_mgr_name" => info.acct_mgr_name = text,
                             "acct_mgr_url" => info.acct_mgr_url = text,
+                            "have_credentials" => info.have_credentials = true,
                             _ => {}
                         }
                     }
@@ -1642,6 +1675,10 @@ pub fn parse_proxy_info(xml: &str) -> ProxyInfo {
                             "socks5_user_name" => info.socks5_user_name = text,
                             "socks5_user_passwd" => info.socks5_user_passwd = text,
                             "noproxy_hosts" => info.noproxy_hosts = text,
+                            "use_http_proxy" => info.use_http_proxy = true,
+                            "use_http_auth" => info.use_http_auth = true,
+                            "use_socks_proxy" => info.use_socks_proxy = true,
+                            "socks5_remote_dns" => info.socks5_remote_dns = true,
                             _ => {}
                         }
                     }
@@ -1717,8 +1754,6 @@ pub fn parse_cc_config(xml: &str) -> CcConfig {
     let mut config = CcConfig::default();
     let mut in_config = false;
     let mut in_log_flags = false;
-    let mut in_exclusive_apps = false;
-    let mut in_exclusive_gpu_apps = false;
 
     loop {
         match reader.read_event_into(&mut buf) {
@@ -1728,7 +1763,7 @@ pub fn parse_cc_config(xml: &str) -> CcConfig {
                     "cc_config" | "config" => in_config = true,
                     "log_flags" if in_config => in_log_flags = true,
                     "options" if in_config => {} // container tag, just enter it
-                    "exclusive_app" if in_config && !in_exclusive_gpu_apps => {
+                    "exclusive_app" if in_config => {
                         let text = read_text(&mut reader);
                         config.exclusive_apps.push(text);
                     }
@@ -1766,6 +1801,7 @@ pub fn parse_cc_config(xml: &str) -> CcConfig {
                             "max_stdout_file_size" => {
                                 config.max_stdout_file_size = text.parse().unwrap_or(0)
                             }
+                            "fetch_minimal_work" => config.fetch_minimal_work = true,
                             _ => {}
                         }
                     }
@@ -1788,8 +1824,6 @@ pub fn parse_cc_config(xml: &str) -> CcConfig {
                 match tag.as_str() {
                     "cc_config" | "config" => in_config = false,
                     "log_flags" => in_log_flags = false,
-                    "exclusive_apps" => in_exclusive_apps = false,
-                    "exclusive_gpu_apps" => in_exclusive_gpu_apps = false,
                     _ => {}
                 }
             }
@@ -1799,7 +1833,6 @@ pub fn parse_cc_config(xml: &str) -> CcConfig {
         }
         buf.clear();
     }
-    let _ = (in_exclusive_apps, in_exclusive_gpu_apps); // suppress unused warnings
     config
 }
 
@@ -1874,10 +1907,16 @@ fn log_flag_list(flags: &LogFlags) -> Vec<(&'static str, bool)> {
 pub fn serialize_cc_config(config: &CcConfig) -> String {
     let mut xml = String::from("<cc_config>\n<options>\n");
     for app in &config.exclusive_apps {
-        xml.push_str(&format!("<exclusive_app>{app}</exclusive_app>\n"));
+        xml.push_str(&format!(
+            "<exclusive_app>{}</exclusive_app>\n",
+            escape_xml_text(app)
+        ));
     }
     for app in &config.exclusive_gpu_apps {
-        xml.push_str(&format!("<exclusive_gpu_app>{app}</exclusive_gpu_app>\n"));
+        xml.push_str(&format!(
+            "<exclusive_gpu_app>{}</exclusive_gpu_app>\n",
+            escape_xml_text(app)
+        ));
     }
     if config.max_file_xfers > 0 {
         xml.push_str(&format!(
@@ -1969,6 +2008,225 @@ pub fn parse_version_info(xml: &str) -> VersionInfo {
     info
 }
 
+/// Parse a `get_state` response and flatten the
+/// `<result>` → `<workunit>` → `<app>` chain into a list of `WorkunitApp`
+/// records. Within `<client_state>`, `<project>` sets the current project —
+/// subsequent sibling `<app>`/`<workunit>`/`<result>` blocks belong to it
+/// until the next `<project>` appears.
+pub fn parse_workunit_apps(xml: &str) -> Vec<WorkunitApp> {
+    struct ResultInfo {
+        project_url: String,
+        name: String,
+        wu_name: String,
+        plan_class: String,
+    }
+
+    let mut reader = Reader::from_str(xml);
+    let mut buf = Vec::new();
+
+    // Positional fallback: tracks the most recently closed <project>.
+    // BOINC's client_state output carries an explicit <project_url> inside
+    // <app>, <workunit>, and <result>, but we still accept positional
+    // tracking for other/legacy responses that omit it.
+    let mut current_project_url = String::new();
+    // (project_url, app_name) -> user_friendly_name
+    let mut apps: HashMap<(String, String), String> = HashMap::new();
+    // (project_url, wu_name) -> (app_name, sub_appname)
+    let mut workunits: HashMap<(String, String), (String, String)> = HashMap::new();
+    let mut results: Vec<ResultInfo> = Vec::new();
+
+    #[derive(PartialEq)]
+    enum Container {
+        None,
+        Project,
+        App,
+        Workunit,
+        Result,
+    }
+    let mut container = Container::None;
+    let mut in_active_task = false;
+
+    // scratch for the currently-open container
+    let mut proj_master_url = String::new();
+    let mut app_name = String::new();
+    let mut app_ufn = String::new();
+    let mut app_project_url = String::new();
+    let mut wu_name = String::new();
+    let mut wu_app_name = String::new();
+    let mut wu_sub_appname = String::new();
+    let mut wu_project_url = String::new();
+    let mut res_name = String::new();
+    let mut res_wu_name = String::new();
+    let mut res_plan_class = String::new();
+    let mut res_project_url = String::new();
+
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(ref e)) => {
+                let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                match container {
+                    Container::None => match tag.as_str() {
+                        "project" => {
+                            container = Container::Project;
+                            proj_master_url.clear();
+                        }
+                        "app" => {
+                            container = Container::App;
+                            app_name.clear();
+                            app_ufn.clear();
+                            app_project_url.clear();
+                        }
+                        "workunit" => {
+                            container = Container::Workunit;
+                            wu_name.clear();
+                            wu_app_name.clear();
+                            wu_sub_appname.clear();
+                            wu_project_url.clear();
+                        }
+                        "result" => {
+                            container = Container::Result;
+                            in_active_task = false;
+                            res_name.clear();
+                            res_wu_name.clear();
+                            res_plan_class.clear();
+                            res_project_url.clear();
+                        }
+                        _ => {}
+                    },
+                    Container::Project => {
+                        if tag == "master_url" {
+                            proj_master_url = read_text(&mut reader);
+                        } else {
+                            // skip nested content
+                            let _ = read_text(&mut reader);
+                        }
+                    }
+                    Container::App => {
+                        let text = read_text(&mut reader);
+                        match tag.as_str() {
+                            "name" => app_name = text,
+                            "user_friendly_name" => app_ufn = text,
+                            "project_url" => app_project_url = text,
+                            _ => {}
+                        }
+                    }
+                    Container::Workunit => {
+                        let text = read_text(&mut reader);
+                        match tag.as_str() {
+                            "name" => wu_name = text,
+                            "app_name" => wu_app_name = text,
+                            "sub_appname" => wu_sub_appname = text,
+                            "project_url" => wu_project_url = text,
+                            _ => {}
+                        }
+                    }
+                    Container::Result => {
+                        if tag == "active_task" {
+                            in_active_task = true;
+                        } else if in_active_task {
+                            let _ = read_text(&mut reader);
+                        } else {
+                            let text = read_text(&mut reader);
+                            match tag.as_str() {
+                                "name" => res_name = text,
+                                "wu_name" => res_wu_name = text,
+                                "plan_class" => res_plan_class = text,
+                                "project_url" => res_project_url = text,
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(Event::End(ref e)) => {
+                let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                match container {
+                    Container::Project if tag == "project" => {
+                        current_project_url = proj_master_url.clone();
+                        container = Container::None;
+                    }
+                    Container::App if tag == "app" => {
+                        if !app_name.is_empty() {
+                            let url = if !app_project_url.is_empty() {
+                                std::mem::take(&mut app_project_url)
+                            } else {
+                                current_project_url.clone()
+                            };
+                            apps.insert(
+                                (url, std::mem::take(&mut app_name)),
+                                std::mem::take(&mut app_ufn),
+                            );
+                        }
+                        container = Container::None;
+                    }
+                    Container::Workunit if tag == "workunit" => {
+                        if !wu_name.is_empty() {
+                            let url = if !wu_project_url.is_empty() {
+                                std::mem::take(&mut wu_project_url)
+                            } else {
+                                current_project_url.clone()
+                            };
+                            workunits.insert(
+                                (url, std::mem::take(&mut wu_name)),
+                                (
+                                    std::mem::take(&mut wu_app_name),
+                                    std::mem::take(&mut wu_sub_appname),
+                                ),
+                            );
+                        }
+                        container = Container::None;
+                    }
+                    Container::Result if tag == "result" => {
+                        if !res_name.is_empty() && !res_wu_name.is_empty() {
+                            let url = if !res_project_url.is_empty() {
+                                std::mem::take(&mut res_project_url)
+                            } else {
+                                current_project_url.clone()
+                            };
+                            results.push(ResultInfo {
+                                project_url: url,
+                                name: std::mem::take(&mut res_name),
+                                wu_name: std::mem::take(&mut res_wu_name),
+                                plan_class: std::mem::take(&mut res_plan_class),
+                            });
+                        }
+                        container = Container::None;
+                    }
+                    Container::Result if tag == "active_task" => {
+                        in_active_task = false;
+                    }
+                    _ => {}
+                }
+            }
+            Ok(Event::Eof) => break,
+            Err(_) => break,
+            _ => {}
+        }
+        buf.clear();
+    }
+
+    results
+        .into_iter()
+        .filter_map(|r| {
+            let wu = workunits.get(&(r.project_url.clone(), r.wu_name.clone()))?;
+            let (wu_app_name, sub_appname) = wu;
+            let ufn = apps
+                .get(&(r.project_url.clone(), wu_app_name.clone()))
+                .cloned()
+                .unwrap_or_default();
+            Some(WorkunitApp {
+                project_url: r.project_url,
+                result_name: r.name,
+                wu_name: r.wu_name,
+                app_name: wu_app_name.clone(),
+                user_friendly_name: ufn,
+                plan_class: r.plan_class,
+                sub_appname: sub_appname.clone(),
+            })
+        })
+        .collect()
+}
+
 /// Parse `<client_state>` from a `get_state` response.
 pub fn parse_cc_state(xml: &str) -> CcState {
     let mut state = CcState {
@@ -2003,6 +2261,10 @@ pub fn parse_cc_state(xml: &str) -> CcState {
                     "platform_name" if in_client_state => {
                         let text = read_text(&mut reader);
                         state.platforms.push(text);
+                    }
+                    "executing_as_daemon" if in_client_state => {
+                        read_text(&mut reader);
+                        state.executing_as_daemon = true;
                     }
                     _ => {}
                 }
@@ -2047,6 +2309,8 @@ pub fn parse_project_init_status(xml: &str) -> ProjectInitStatus {
                             "url" => status.url = text,
                             "name" => status.name = text,
                             "team_name" => status.team_name = text,
+                            "has_account_key" => status.has_account_key = true,
+                            "embedded" => status.embedded = true,
                             _ => {}
                         }
                     }
@@ -2473,6 +2737,260 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_workunit_apps_joins_result_to_app() {
+        let xml = r#"
+<boinc_gui_rpc_reply>
+<client_state>
+<project>
+    <master_url>https://example.com/seti/</master_url>
+    <project_name>SETI@home</project_name>
+</project>
+<app>
+    <name>setiathome_v8</name>
+    <user_friendly_name>SETI@home v8</user_friendly_name>
+</app>
+<app_version>
+    <app_name>setiathome_v8</app_name>
+    <version_num>802</version_num>
+    <plan_class>opencl_nvidia_100</plan_class>
+</app_version>
+<workunit>
+    <name>18no09aa.wu_0</name>
+    <app_name>setiathome_v8</app_name>
+</workunit>
+<result>
+    <name>18no09aa.wu_0_1</name>
+    <wu_name>18no09aa.wu_0</wu_name>
+    <plan_class>opencl_nvidia_100</plan_class>
+</result>
+<project>
+    <master_url>https://example.com/rosetta/</master_url>
+    <project_name>Rosetta@home</project_name>
+</project>
+<app>
+    <name>rosetta</name>
+    <user_friendly_name>Rosetta Mini</user_friendly_name>
+</app>
+<workunit>
+    <name>rosetta_wu_1</name>
+    <app_name>rosetta</app_name>
+    <sub_appname>Rosetta Mini sub</sub_appname>
+</workunit>
+<result>
+    <name>rosetta_wu_1_0</name>
+    <wu_name>rosetta_wu_1</wu_name>
+    <plan_class>mt</plan_class>
+</result>
+</client_state>
+</boinc_gui_rpc_reply>"#;
+
+        let apps = parse_workunit_apps(xml);
+        assert_eq!(apps.len(), 2);
+
+        let seti = apps
+            .iter()
+            .find(|a| a.result_name == "18no09aa.wu_0_1")
+            .expect("seti result present");
+        assert_eq!(seti.project_url, "https://example.com/seti/");
+        assert_eq!(seti.wu_name, "18no09aa.wu_0");
+        assert_eq!(seti.app_name, "setiathome_v8");
+        assert_eq!(seti.user_friendly_name, "SETI@home v8");
+        assert_eq!(seti.plan_class, "opencl_nvidia_100");
+        assert_eq!(seti.sub_appname, "");
+
+        let rosetta = apps
+            .iter()
+            .find(|a| a.result_name == "rosetta_wu_1_0")
+            .expect("rosetta result present");
+        assert_eq!(rosetta.project_url, "https://example.com/rosetta/");
+        assert_eq!(rosetta.user_friendly_name, "Rosetta Mini");
+        assert_eq!(rosetta.sub_appname, "Rosetta Mini sub");
+        assert_eq!(rosetta.plan_class, "mt");
+    }
+
+    #[test]
+    fn test_parse_workunit_apps_handles_result_with_active_task() {
+        // Running tasks have an <active_task> block nested inside <result>.
+        // Regression: the parser must keep res_name / res_wu_name populated so
+        // running tasks still appear in the joined output.
+        let xml = r#"<boinc_gui_rpc_reply>
+<client_state>
+<project>
+    <master_url>https://example.com/p/</master_url>
+</project>
+<app>
+    <name>myapp</name>
+    <user_friendly_name>My App</user_friendly_name>
+</app>
+<workunit>
+    <name>wu1</name>
+    <app_name>myapp</app_name>
+</workunit>
+<result>
+    <name>res_running</name>
+    <wu_name>wu1</wu_name>
+    <plan_class>mt</plan_class>
+    <active_task>
+        <active_task_state>1</active_task_state>
+        <app_version_num>802</app_version_num>
+        <slot>0</slot>
+        <pid>1234</pid>
+        <scheduler_state>2</scheduler_state>
+        <fraction_done>0.25</fraction_done>
+        <checkpoint_cpu_time>100.0</checkpoint_cpu_time>
+        <needs_shmem/>
+    </active_task>
+</result>
+<result>
+    <name>res_queued</name>
+    <wu_name>wu1</wu_name>
+    <plan_class>mt</plan_class>
+</result>
+</client_state>
+</boinc_gui_rpc_reply>"#;
+        let apps = parse_workunit_apps(xml);
+        let names: Vec<_> = apps.iter().map(|a| a.result_name.as_str()).collect();
+        assert!(
+            names.contains(&"res_running"),
+            "running task missing from joined output; got {:?}",
+            names
+        );
+        assert!(
+            names.contains(&"res_queued"),
+            "queued task missing; got {:?}",
+            names
+        );
+    }
+
+    #[test]
+    fn test_parse_workunit_apps_handles_active_task_with_nested_children() {
+        // Some BOINC builds emit nested elements inside active_task
+        // (e.g. <graphics_exec_path>) which contain text that could bleed
+        // into sibling state if the skip path is wrong.
+        let xml = r#"<boinc_gui_rpc_reply>
+<client_state>
+<project>
+    <master_url>https://example.com/p/</master_url>
+</project>
+<app>
+    <name>myapp</name>
+    <user_friendly_name>My App</user_friendly_name>
+</app>
+<workunit>
+    <name>wu1</name>
+    <app_name>myapp</app_name>
+</workunit>
+<result>
+    <name>res_running</name>
+    <wu_name>wu1</wu_name>
+    <plan_class>mt</plan_class>
+    <active_task>
+        <active_task_state>1</active_task_state>
+        <graphics_exec_path>/path/to/graphics</graphics_exec_path>
+        <slot_path>/path/to/slot</slot_path>
+        <app_version>
+            <platform>x86_64</platform>
+            <version_num>802</version_num>
+        </app_version>
+    </active_task>
+</result>
+</client_state>
+</boinc_gui_rpc_reply>"#;
+        let apps = parse_workunit_apps(xml);
+        let names: Vec<_> = apps.iter().map(|a| a.result_name.as_str()).collect();
+        assert!(
+            names.contains(&"res_running"),
+            "running task missing when active_task has nested children; got {:?}",
+            names
+        );
+    }
+
+    #[test]
+    fn test_parse_workunit_apps_boinc_grouped_emission_order() {
+        // BOINC's client_state.xml emits ALL projects first, then ALL apps,
+        // then ALL workunits, then ALL results — not interleaved per project.
+        // Each child carries <project_url> so the join must use that, not
+        // positional tracking.
+        let xml = r#"<boinc_gui_rpc_reply>
+<client_state>
+<project>
+    <master_url>https://projA.example.com/</master_url>
+</project>
+<project>
+    <master_url>https://projB.example.com/</master_url>
+</project>
+<app>
+    <name>app_a</name>
+    <user_friendly_name>App A</user_friendly_name>
+    <project_url>https://projA.example.com/</project_url>
+</app>
+<app>
+    <name>app_b</name>
+    <user_friendly_name>App B</user_friendly_name>
+    <project_url>https://projB.example.com/</project_url>
+</app>
+<workunit>
+    <name>wu_a</name>
+    <app_name>app_a</app_name>
+    <project_url>https://projA.example.com/</project_url>
+</workunit>
+<workunit>
+    <name>wu_b</name>
+    <app_name>app_b</app_name>
+    <project_url>https://projB.example.com/</project_url>
+</workunit>
+<result>
+    <name>res_a</name>
+    <wu_name>wu_a</wu_name>
+    <project_url>https://projA.example.com/</project_url>
+</result>
+<result>
+    <name>res_b</name>
+    <wu_name>wu_b</wu_name>
+    <project_url>https://projB.example.com/</project_url>
+</result>
+</client_state>
+</boinc_gui_rpc_reply>"#;
+        let apps = parse_workunit_apps(xml);
+        let names: Vec<_> = apps.iter().map(|a| a.result_name.as_str()).collect();
+        assert!(
+            names.contains(&"res_a"),
+            "result res_a from project A missing; got {:?}",
+            names
+        );
+        assert!(
+            names.contains(&"res_b"),
+            "result res_b from project B missing; got {:?}",
+            names
+        );
+
+        let a = apps.iter().find(|a| a.result_name == "res_a").unwrap();
+        let b = apps.iter().find(|a| a.result_name == "res_b").unwrap();
+        assert_eq!(a.project_url, "https://projA.example.com/");
+        assert_eq!(a.user_friendly_name, "App A");
+        assert_eq!(b.project_url, "https://projB.example.com/");
+        assert_eq!(b.user_friendly_name, "App B");
+    }
+
+    #[test]
+    fn test_parse_workunit_apps_skips_orphan_results() {
+        // Result with no matching workunit should be dropped.
+        let xml = r#"
+<boinc_gui_rpc_reply>
+<client_state>
+<project>
+    <master_url>https://example.com/p/</master_url>
+</project>
+<result>
+    <name>orphan_0</name>
+    <wu_name>nonexistent_wu</wu_name>
+</result>
+</client_state>
+</boinc_gui_rpc_reply>"#;
+        assert!(parse_workunit_apps(xml).is_empty());
+    }
+
+    #[test]
     fn test_parse_file_transfers() {
         let xml = r#"
 <boinc_gui_rpc_reply>
@@ -2783,6 +3301,23 @@ Computation started
     }
 
     #[test]
+    fn test_parse_acct_mgr_info_non_self_closing() {
+        let xml = r#"
+<boinc_gui_rpc_reply>
+<acct_mgr_info>
+    <acct_mgr_name>BAM!</acct_mgr_name>
+    <acct_mgr_url>https://bam.boincstats.com/</acct_mgr_url>
+    <have_credentials></have_credentials>
+</acct_mgr_info>
+</boinc_gui_rpc_reply>"#;
+
+        let info = parse_acct_mgr_info(xml);
+        assert_eq!(info.acct_mgr_name, "BAM!");
+        assert_eq!(info.acct_mgr_url, "https://bam.boincstats.com/");
+        assert!(info.have_credentials);
+    }
+
+    #[test]
     fn test_parse_newer_version() {
         let xml = r#"
 <boinc_gui_rpc_reply>
@@ -2943,6 +3478,23 @@ Computation started
         assert!(xml.contains("<task>1</task>"));
         assert!(xml.contains("<file_xfer>0</file_xfer>"));
         assert!(xml.contains("<max_file_xfers>6</max_file_xfers>"));
+    }
+
+    #[test]
+    fn test_serialize_cc_config_escapes_exclusive_app_names() {
+        let config = CcConfig {
+            exclusive_apps: vec!["rock & roll.exe".to_string(), "ng<foo>.exe".to_string()],
+            exclusive_gpu_apps: vec!["a&b.exe".to_string()],
+            ..Default::default()
+        };
+        let xml = serialize_cc_config(&config);
+        assert!(xml.contains("<exclusive_app>rock &amp; roll.exe</exclusive_app>"));
+        assert!(xml.contains("<exclusive_app>ng&lt;foo&gt;.exe</exclusive_app>"));
+        assert!(xml.contains("<exclusive_gpu_app>a&amp;b.exe</exclusive_gpu_app>"));
+
+        let reparsed = parse_cc_config(&xml);
+        assert_eq!(reparsed.exclusive_apps, config.exclusive_apps);
+        assert_eq!(reparsed.exclusive_gpu_apps, config.exclusive_gpu_apps);
     }
 
     #[test]

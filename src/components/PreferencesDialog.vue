@@ -7,6 +7,7 @@ import { usePreferencesStore } from "../stores/preferences";
 import { useManagerSettingsStore } from "../stores/managerSettings";
 import type { GlobalPreferences } from "../types/boinc";
 import PrefNumericInput from "./PrefNumericInput.vue";
+import PrefRangeInput from "./PrefRangeInput.vue";
 import PrefTimeInput from "./PrefTimeInput.vue";
 import PrefToggleSwitch from "./PrefToggleSwitch.vue";
 import Tooltip from "./Tooltip.vue";
@@ -34,7 +35,9 @@ const props = withDefaults(
 const emit = defineEmits<{ close: [] }>();
 
 const dialogRef = ref<HTMLElement | null>(null);
-const { activate, deactivate } = useFocusTrap(dialogRef);
+const { activate, deactivate } = useFocusTrap(dialogRef, {
+  allowOutsideClick: true,
+});
 watch(
   () => props.open,
   async (isOpen) => {
@@ -110,6 +113,16 @@ const dayEnabled = ref<boolean[]>([
   false,
   false,
 ]);
+const PER_DAY_STORAGE_KEY = "fresco.schedulePrefs.perDayExpanded";
+const perDayExpanded = ref(
+  localStorage.getItem(PER_DAY_STORAGE_KEY) === "true",
+);
+watch(perDayExpanded, (v) =>
+  localStorage.setItem(PER_DAY_STORAGE_KEY, String(v)),
+);
+const enabledDayCount = computed(
+  () => dayEnabled.value.filter(Boolean).length,
+);
 const originalSnapshot = ref("");
 
 const hasChanges = computed(() => {
@@ -322,39 +335,45 @@ async function save() {
                 :step="1"
                 :zero-label="$t('prefs.zeroLabel.noWait')"
               />
-              <PrefNumericInput
+              <PrefRangeInput
                 v-model="form.max_ncpus_pct"
                 :label="$t('prefs.computing.maxCpus')"
                 field="max_ncpus_pct"
                 :min="0"
                 :max="100"
-                :step="1"
+                :step="10"
+                suffix="%"
                 :zero-label="$t('prefs.zeroLabel.useAll')"
               />
-              <PrefNumericInput
+              <PrefRangeInput
                 v-model="form.cpu_usage_limit"
                 :label="$t('prefs.computing.cpuUsageLimit')"
                 field="cpu_usage_limit"
                 :min="0"
                 :max="100"
-                :step="1"
+                :step="10"
+                suffix="%"
                 :zero-label="$t('prefs.zeroLabel.noLimit')"
               />
-              <PrefNumericInput
+              <PrefRangeInput
                 v-model="form.ram_max_used_busy_frac"
                 :label="$t('prefs.computing.ramBusy')"
                 field="ram_max_used_busy_frac"
                 :min="0"
                 :max="1"
-                :step="0.05"
+                :step="0.1"
+                fraction
+                suffix="%"
               />
-              <PrefNumericInput
+              <PrefRangeInput
                 v-model="form.ram_max_used_idle_frac"
                 :label="$t('prefs.computing.ramIdle')"
                 field="ram_max_used_idle_frac"
                 :min="0"
                 :max="1"
-                :step="0.05"
+                :step="0.1"
+                fraction
+                suffix="%"
               />
               <PrefTimeInput
                 v-model="form.start_hour"
@@ -376,13 +395,14 @@ async function save() {
                 :step="1"
                 :zero-label="$t('prefs.zeroLabel.disabled')"
               />
-              <PrefNumericInput
+              <PrefRangeInput
                 v-model="form.suspend_cpu_usage"
                 :label="$t('prefs.computing.suspendCpuUsage')"
                 field="suspend_cpu_usage"
                 :min="0"
                 :max="100"
-                :step="1"
+                :step="10"
+                suffix="%"
                 :zero-label="$t('prefs.zeroLabel.disabled')"
               />
               <PrefToggleSwitch
@@ -484,13 +504,14 @@ async function save() {
                 :step="1"
                 :zero-label="$t('prefs.zeroLabel.noLimit')"
               />
-              <PrefNumericInput
+              <PrefRangeInput
                 v-model="form.disk_max_used_pct"
                 :label="$t('prefs.storage.maxDiskPct')"
                 field="disk_max_used_pct"
                 :min="0"
                 :max="100"
-                :step="1"
+                :step="10"
+                suffix="%"
                 :zero-label="$t('prefs.zeroLabel.noLimit')"
               />
               <PrefNumericInput
@@ -518,46 +539,119 @@ async function save() {
               class="prefs-section"
               tabindex="0"
             >
-              <p class="section-desc">{{ $t("prefs.schedule.desc") }}</p>
-              <div class="schedule-days">
-                <div v-for="(day, i) in dayNames" :key="i" class="schedule-day">
-                  <div class="schedule-day-header">
-                    <label class="day-toggle">
-                      <span
-                        class="toggle-switch toggle-sm"
-                        :class="{ on: dayEnabled[i] }"
-                        role="switch"
-                        :aria-checked="!!dayEnabled[i]"
-                        tabindex="0"
-                        @click.prevent="toggleDay(i, !dayEnabled[i])"
-                        @keydown.enter.prevent="toggleDay(i, !dayEnabled[i])"
-                        @keydown.space.prevent="toggleDay(i, !dayEnabled[i])"
-                      >
-                        <span class="toggle-knob" />
-                      </span>
-                      <span class="day-name">{{ day }}</span>
-                    </label>
-                    <span v-if="!dayEnabled[i]" class="uses-default-badge">{{
-                      defaultBadge()
-                    }}</span>
-                  </div>
-                  <div v-if="dayEnabled[i]" class="schedule-day-fields">
-                    <TimeRangeSlider
-                      :start-hour="getDayPref(i).start_hour"
-                      :end-hour="getDayPref(i).end_hour"
-                      label="CPU"
-                      @update:start-hour="setDayField(i, 'start_hour', $event)"
-                      @update:end-hour="setDayField(i, 'end_hour', $event)"
-                    />
-                    <TimeRangeSlider
-                      :start-hour="getDayPref(i).net_start_hour"
-                      :end-hour="getDayPref(i).net_end_hour"
-                      label="Net"
-                      @update:start-hour="
-                        setDayField(i, 'net_start_hour', $event)
-                      "
-                      @update:end-hour="setDayField(i, 'net_end_hour', $event)"
-                    />
+              <div class="schedule-overall-header">
+                <h3 class="schedule-section-title">
+                  {{ $t("prefs.schedule.overall") }}
+                </h3>
+              </div>
+              <div v-if="form" class="schedule-overall">
+                <TimeRangeSlider
+                  :start-hour="form.start_hour"
+                  :end-hour="form.end_hour"
+                  label="CPU"
+                  @update:start-hour="form.start_hour = $event"
+                  @update:end-hour="form.end_hour = $event"
+                />
+                <TimeRangeSlider
+                  :start-hour="form.net_start_hour"
+                  :end-hour="form.net_end_hour"
+                  label="Net"
+                  @update:start-hour="form.net_start_hour = $event"
+                  @update:end-hour="form.net_end_hour = $event"
+                />
+              </div>
+              <button
+                type="button"
+                class="schedule-section-toggle"
+                :aria-expanded="perDayExpanded"
+                data-testid="per-day-toggle"
+                @click="perDayExpanded = !perDayExpanded"
+              >
+                <span class="schedule-section-title">
+                  {{ $t("prefs.schedule.perDay") }}
+                </span>
+                <span
+                  v-if="!perDayExpanded && enabledDayCount > 0"
+                  class="schedule-section-count"
+                >
+                  {{ enabledDayCount }}
+                </span>
+                <svg
+                  :class="['chevron', { open: perDayExpanded }]"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </button>
+              <div
+                :class="['schedule-expandable', { open: perDayExpanded }]"
+                :aria-hidden="!perDayExpanded"
+              >
+                <div class="schedule-expandable-inner">
+                  <p class="section-desc">{{ $t("prefs.schedule.desc") }}</p>
+                  <div class="schedule-days">
+                    <div
+                      v-for="(day, i) in dayNames"
+                      :key="i"
+                      class="schedule-day"
+                    >
+                      <div class="schedule-day-header">
+                        <label class="day-toggle">
+                          <span
+                            class="toggle-switch toggle-sm"
+                            :class="{ on: dayEnabled[i] }"
+                            role="switch"
+                            :aria-checked="!!dayEnabled[i]"
+                            tabindex="0"
+                            @click.prevent="toggleDay(i, !dayEnabled[i])"
+                            @keydown.enter.prevent="
+                              toggleDay(i, !dayEnabled[i])
+                            "
+                            @keydown.space.prevent="
+                              toggleDay(i, !dayEnabled[i])
+                            "
+                          >
+                            <span class="toggle-knob" />
+                          </span>
+                          <span class="day-name">{{ day }}</span>
+                        </label>
+                        <span
+                          v-if="!dayEnabled[i]"
+                          class="uses-default-badge"
+                          >{{ defaultBadge() }}</span
+                        >
+                      </div>
+                      <div v-if="dayEnabled[i]" class="schedule-day-fields">
+                        <TimeRangeSlider
+                          :start-hour="getDayPref(i).start_hour"
+                          :end-hour="getDayPref(i).end_hour"
+                          label="CPU"
+                          @update:start-hour="
+                            setDayField(i, 'start_hour', $event)
+                          "
+                          @update:end-hour="
+                            setDayField(i, 'end_hour', $event)
+                          "
+                        />
+                        <TimeRangeSlider
+                          :start-hour="getDayPref(i).net_start_hour"
+                          :end-hour="getDayPref(i).net_end_hour"
+                          label="Net"
+                          @update:start-hour="
+                            setDayField(i, 'net_start_hour', $event)
+                          "
+                          @update:end-hour="
+                            setDayField(i, 'net_end_hour', $event)
+                          "
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -939,6 +1033,104 @@ async function save() {
 
 /* ── Schedule tab ──────────────────────────────────────────────── */
 
+.schedule-section-title {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.schedule-overall-header {
+  padding: 6px 0;
+}
+
+.schedule-overall {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 24px var(--space-xs) 24px;
+}
+
+.schedule-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: var(--space-md);
+  padding: 6px 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+  font: inherit;
+  transition: color 0.12s ease;
+}
+
+.schedule-section-toggle:hover {
+  color: var(--color-text-primary);
+}
+
+.schedule-section-toggle:hover .schedule-section-title {
+  color: var(--color-text-primary);
+}
+
+.schedule-section-toggle:hover .chevron {
+  color: var(--color-text-primary);
+}
+
+.schedule-section-toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.schedule-section-toggle .schedule-section-title {
+  flex: 1;
+  margin: 0;
+}
+
+.schedule-section-count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-tertiary);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-variant-numeric: tabular-nums;
+}
+
+.schedule-section-toggle .chevron {
+  width: 12px;
+  height: 12px;
+  color: var(--color-text-tertiary);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.schedule-section-toggle .chevron.open {
+  transform: rotate(180deg);
+}
+
+.schedule-expandable {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.2s ease;
+}
+
+.schedule-expandable.open {
+  grid-template-rows: 1fr;
+}
+
+.schedule-expandable-inner {
+  overflow: hidden;
+}
+
+.schedule-expandable.open .schedule-expandable-inner {
+  padding-top: var(--space-xs);
+}
+
 .schedule-days {
   display: flex;
   flex-direction: column;
@@ -1001,7 +1193,7 @@ async function save() {
   flex-direction: column;
   gap: 6px;
   margin-top: 8px;
-  padding-left: 24px;
+  padding: 0 24px;
 }
 
 .section-btn {

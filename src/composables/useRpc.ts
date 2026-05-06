@@ -25,6 +25,7 @@ import type {
   ProjectInitStatus,
   DailyXferHistory,
   OldResult,
+  WorkunitApp,
 } from "../types/boinc";
 
 /**
@@ -146,6 +147,15 @@ export async function setNetworkMode(
   duration: number,
 ): Promise<void> {
   return invoke("set_network_mode", { mode, duration });
+}
+
+// ── Tray sync ───────────────────────────────────────────────────
+
+export async function syncTrayModes(
+  taskMode: number,
+  gpuMode: number,
+): Promise<void> {
+  return invoke("sync_tray_modes", { taskMode, gpuMode });
 }
 
 // ── Transfer actions ─────────────────────────────────────────────
@@ -332,6 +342,10 @@ export async function setCcConfig(config: CcConfig): Promise<void> {
   return invoke("set_cc_config", { config });
 }
 
+export async function listRunningProcesses(): Promise<string[]> {
+  return invoke("list_running_processes");
+}
+
 // ── Version check ───────────────────────────────────────────────
 
 export async function getNewerVersion(): Promise<NewerVersionInfo> {
@@ -358,6 +372,10 @@ export async function exchangeVersions(): Promise<VersionInfo> {
 
 export async function getState(): Promise<CcState> {
   return invoke("get_state");
+}
+
+export async function getWorkunitApps(): Promise<WorkunitApp[]> {
+  return invoke("get_workunit_apps");
 }
 
 // ── Read commands ───────────────────────────────────────────────

@@ -52,7 +52,9 @@
       "progress": "Progress",
       "elapsed": "Elapsed",
       "remaining": "Remaining",
+      "deadline": "Deadline",
       "status": "Status",
+      "application": "Application",
       "resources": "Resources",
       "task": "Task"
     },
@@ -90,6 +92,7 @@
     "addProject": "Add Project",
     "accountManager": "Account Manager",
     "columns": "Columns",
+    "customizeColumns": "Show, hide, or reorder columns",
     "loading": "Loading projects...",
     "empty": "No projects attached.",
     "col": {
@@ -98,6 +101,7 @@
       "team": "Team",
       "totalCredit": "Total Credit",
       "avgCredit": "Avg Credit",
+      "resourceShare": "Resource Share",
       "status": "Status",
       "source": "Source"
     },
@@ -288,7 +292,8 @@
   "notices": {
     "title": "Notices",
     "loading": "Loading notices...",
-    "empty": "No notices at this time."
+    "empty": "No notices at this time.",
+    "noticeFromBoinc": "Notice from BOINC"
   },
   "connect": {
     "title": "Connect to BOINC Client",
@@ -323,19 +328,19 @@
       "runOnBatteries": "Run on batteries",
       "runIfUserActive": "Run if user is active",
       "idleTime": "Idle time before running (min)",
-      "maxCpus": "Max CPUs used (%)",
-      "cpuUsageLimit": "CPU usage limit (%)",
-      "ramBusy": "RAM when busy (fraction)",
-      "ramIdle": "RAM when idle (fraction)",
+      "maxCpus": "Max CPUs used",
+      "cpuUsageLimit": "CPU usage limit",
+      "ramBusy": "RAM when busy",
+      "ramIdle": "RAM when idle",
       "startHour": "Computing start hour",
       "endHour": "Computing end hour",
       "suspendNoInput": "Suspend if no recent input (min)",
-      "suspendCpuUsage": "Suspend if CPU usage above (%)",
+      "suspendCpuUsage": "Suspend if CPU usage above",
       "leaveInMemory": "Leave apps in memory",
       "additionalBuffer": "Additional work buffer (days)",
       "schedulingPeriod": "CPU scheduling period (min)",
-      "exclusiveApps": "Exclusive Applications...",
-      "exclusiveAppsTooltip": "Apps that should suspend BOINC while running"
+      "exclusiveApps": "Pause BOINC When Apps Run...",
+      "exclusiveAppsTooltip": "Configure apps that pause BOINC tasks while they are running"
     },
     "network": {
       "maxDownload": "Max download rate (bytes/s)",
@@ -347,12 +352,14 @@
     },
     "storage": {
       "maxDiskGb": "Max disk used (GB)",
-      "maxDiskPct": "Max disk used (%)",
+      "maxDiskPct": "Max disk used",
       "minFreeGb": "Min free disk (GB)",
       "workBuffer": "Work buffer (days)"
     },
     "schedule": {
-      "desc": "Override computing and network hours for specific days. Unchecked days use the global hours set above.",
+      "desc": "Override computing and network hours for specific days. Unchecked days use the default hours set above.",
+      "overall": "Default daily schedule",
+      "perDay": "Per-day overrides",
       "allDay": "All day"
     },
     "manager": {
@@ -451,9 +458,16 @@
     "always": "Always",
     "auto": "Auto",
     "suspend": "Suspend",
+    "alwaysTooltip": "Always — run regardless of computing preferences",
+    "autoTooltip": "Auto — follow computing preferences",
+    "suspendTooltip": "Suspend",
     "cpuModeLabel": "CPU mode",
     "gpuModeLabel": "GPU mode",
-    "netModeLabel": "Network mode"
+    "netModeLabel": "Network mode",
+    "all": "All",
+    "allModeLabel": "All resources mode",
+    "expand": "Show individual controls",
+    "collapse": "Hide individual controls"
   },
   "statusBar": {
     "connected": "Connected",
@@ -641,17 +655,37 @@
     "attachFailed": "Attach failed"
   },
   "exclusiveApps": {
-    "title": "Exclusive Applications",
+    "title": "Pause BOINC When These Apps Run",
     "loading": "Loading configuration...",
-    "cpuApps": "Exclusive CPU Applications",
-    "gpuApps": "Exclusive GPU Applications",
-    "noCpuApps": "No exclusive CPU applications configured.",
-    "noGpuApps": "No exclusive GPU applications configured.",
-    "appPlaceholder": "Application name",
-    "add": "Add",
+    "intro": "BOINC will pause work whenever any of these apps is running. Use \"All tasks\" to pause everything, or \"GPU tasks only\" when you just want GPUs idle (e.g. while gaming).",
+    "columnApp": "Application",
+    "columnScope": "Pauses",
+    "scopeAll": "All tasks",
+    "scopeGpu": "GPU tasks only",
+    "empty": "No apps yet. Add one below or pick a running process.",
+    "appPlaceholder": "e.g. photoshop.exe",
+    "addApp": "Add app",
+    "pickProcess": "Pick running process...",
+    "remove": "Remove",
+    "duplicate": "\"{name}\" is already in the list.",
     "cancel": "Cancel",
     "saving": "Saving...",
-    "save": "Save"
+    "save": "Save",
+    "discardTitle": "Discard changes?",
+    "discardBody": "You have unsaved changes. Discard them?",
+    "discardConfirm": "Discard",
+    "discardCancel": "Keep editing",
+    "picker": {
+      "title": "Running processes",
+      "search": "Filter processes...",
+      "loading": "Loading processes...",
+      "empty": "No processes found.",
+      "loadError": "Failed to load processes.",
+      "hideBoinc": "Hide BOINC processes",
+      "count": "{n} selected",
+      "add": "Add selected",
+      "cancel": "Cancel"
+    }
   },
   "managerOptions": {
     "title": "Manager Options",
@@ -669,17 +703,19 @@
   "proxy": {
     "title": "Proxy Settings",
     "loading": "Loading proxy settings...",
+    "none": "None",
     "httpProxy": "HTTP Proxy",
-    "socksProxy": "SOCKS Proxy",
-    "useHttp": "Use HTTP proxy",
+    "socksProxy": "SOCKS5",
     "serverName": "Server name",
     "port": "Port",
     "useHttpAuth": "Use HTTP authentication",
     "username": "Username",
     "password": "Password",
-    "useSocks": "Use SOCKS proxy",
     "useSocks5Dns": "Use SOCKS5 remote DNS",
-    "noProxyHosts": "No proxy hosts (comma-separated)",
+    "noProxyHosts": "No-proxy hosts",
+    "noProxyMessage": "Direct connection — no proxy configured",
+    "removeHost": "Remove host",
+    "addHostPlaceholder": "Add hostname...",
     "cancel": "Cancel",
     "saving": "Saving...",
     "save": "Save"
@@ -704,5 +740,37 @@
     "newNoticesBody": "{count} new notice | {count} new notices",
     "connectionLostTitle": "Connection Lost",
     "connectionLostBody": "Lost connection to the BOINC client."
+  },
+  "onboarding": {
+    "takeover": {
+      "title": "Use Fresco as your BOINC manager?",
+      "lead": "We detected the official BOINC Manager set to start with your computer.",
+      "explanation": "Fresco and the BOINC Manager share the same computing engine, so only one is needed. We can turn off the Manager's autostart — your projects and progress stay untouched.",
+      "macLoginItemNote": "On this macOS version, login items must be turned off by hand. We'll open the right settings page for you.",
+      "useFrescoOnly": "Use Fresco only",
+      "keepBoth": "Keep both",
+      "successToast": "BOINC Manager autostart disabled.",
+      "manualToast": "Opened System Settings — turn off \"BOINCManager\" under Login Items.",
+      "linuxManualToast": "System-wide autostart at {path} — remove it as root to disable.",
+      "windowsHklmManualToast": "System-wide Run key \"{valueName}\" in HKLM — remove it from an elevated session to disable.",
+      "errorToast": "Could not disable BOINC Manager autostart."
+    },
+    "install": {
+      "title": "BOINC isn't installed yet",
+      "lead": "Fresco needs the BOINC computing engine to run tasks. We can set it up for you.",
+      "brewAction": "Install via Homebrew",
+      "brewInProgress": "Installing BOINC…",
+      "brewError": "Homebrew install failed. Please try again or install BOINC manually.",
+      "macosNoBrewLead": "Homebrew isn't available on this Mac. Download BOINC from the official site instead.",
+      "linuxLead": "Run this in your terminal to install the BOINC client:",
+      "linuxNoPmFallback": "No supported package manager was found. Download BOINC from the official site.",
+      "linuxCopyButton": "Copy",
+      "copied": "Command copied to clipboard.",
+      "windowsLead": "Download BOINC from the official site, then return here. Fresco will auto-connect once the client is running.",
+      "windowsManagerNote": "In the installer, uncheck \"BOINC Manager\" — Fresco replaces it.",
+      "downloadButton": "Download BOINC",
+      "showMore": "Other package managers",
+      "skip": "Skip"
+    }
   }
 }

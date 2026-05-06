@@ -52,7 +52,9 @@
       "progress": "進捗状況",
       "elapsed": "経過時間",
       "remaining": "残り時間",
+      "deadline": "締め切り",
       "status": "状態",
+      "application": "アプリケーション",
       "resources": "リソース",
       "task": "タスク"
     },
@@ -90,6 +92,7 @@
     "addProject": "プロジェクトを追加",
     "accountManager": "アカウントマネージャ",
     "columns": "列",
+    "customizeColumns": "列の表示・非表示・並び替え",
     "loading": "プロジェクトを読み込み中...",
     "empty": "プロジェクトが追加されていません。",
     "col": {
@@ -98,6 +101,7 @@
       "team": "チーム",
       "totalCredit": "合計クレジット",
       "avgCredit": "平均クレジット",
+      "resourceShare": "リソース割り当て",
       "status": "状態",
       "source": "ソース"
     },
@@ -288,7 +292,8 @@
   "notices": {
     "title": "お知らせ",
     "loading": "お知らせを読み込み中...",
-    "empty": "現在お知らせはありません。"
+    "empty": "現在お知らせはありません。",
+    "noticeFromBoinc": "BOINCからのお知らせ"
   },
   "connect": {
     "title": "BOINCクライアントに接続",
@@ -323,14 +328,14 @@
       "runOnBatteries": "バッテリー使用時も実行",
       "runIfUserActive": "ユーザー操作中も実行",
       "idleTime": "実行開始までのアイドル時間（分）",
-      "maxCpus": "最大CPU使用率（%）",
-      "cpuUsageLimit": "CPU使用制限（%）",
-      "ramBusy": "使用中のRAM比率",
-      "ramIdle": "アイドル時のRAM比率",
+      "maxCpus": "最大CPU使用率",
+      "cpuUsageLimit": "CPU使用制限",
+      "ramBusy": "使用中のRAM",
+      "ramIdle": "アイドル時のRAM",
       "startHour": "計算開始時刻",
       "endHour": "計算終了時刻",
       "suspendNoInput": "入力がない場合に一時停止（分）",
-      "suspendCpuUsage": "CPU使用率がこの値を超えたら一時停止（%）",
+      "suspendCpuUsage": "CPU使用率がこの値を超えたら一時停止",
       "leaveInMemory": "アプリをメモリに保持",
       "additionalBuffer": "追加ワークバッファ（日）",
       "schedulingPeriod": "CPUスケジューリング周期（分）",
@@ -347,7 +352,7 @@
     },
     "storage": {
       "maxDiskGb": "最大ディスク使用量（GB）",
-      "maxDiskPct": "最大ディスク使用率（%）",
+      "maxDiskPct": "最大ディスク使用率",
       "minFreeGb": "最小空きディスク（GB）",
       "workBuffer": "ワークバッファ（日）"
     },
@@ -669,17 +674,19 @@
   "proxy": {
     "title": "プロキシ設定",
     "loading": "プロキシ設定を読み込み中...",
+    "none": "なし",
     "httpProxy": "HTTP プロキシ",
-    "socksProxy": "SOCKS プロキシ",
-    "useHttp": "HTTPプロキシを使用",
+    "socksProxy": "SOCKS5",
     "serverName": "サーバー名",
     "port": "ポート番号:",
     "useHttpAuth": "HTTP認証を使用",
     "username": "ユーザー名(U):",
     "password": "パスワード:",
-    "useSocks": "SOCKSプロキシを使用",
     "useSocks5Dns": "SOCKS5リモートDNSを使用",
-    "noProxyHosts": "プロキシを使用しないホスト（カンマ区切り）",
+    "noProxyHosts": "プロキシ除外ホスト",
+    "noProxyMessage": "直接接続 — プロキシ未設定",
+    "removeHost": "ホストを削除",
+    "addHostPlaceholder": "ホスト名を追加...",
     "cancel": "キャンセル",
     "saving": "保存中...",
     "save": "保存"

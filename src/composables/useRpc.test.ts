@@ -57,11 +57,13 @@ import {
   setProxySettings,
   getCcConfig,
   setCcConfig,
+  listRunningProcesses,
   getNewerVersion,
   launchGraphics,
   launchRemoteDesktop,
   exchangeVersions,
   getState,
+  getWorkunitApps,
   readGlobalPrefsOverride,
   readCcConfig,
   getGlobalPrefsWorking,
@@ -162,6 +164,11 @@ describe("useRpc", () => {
     it("getState calls correct command", async () => {
       await getState();
       expect(mockInvoke).toHaveBeenCalledWith("get_state");
+    });
+
+    it("getWorkunitApps calls correct command", async () => {
+      await getWorkunitApps();
+      expect(mockInvoke).toHaveBeenCalledWith("get_workunit_apps");
     });
   });
 
@@ -446,6 +453,11 @@ describe("useRpc", () => {
       const config = { log_flags: {} } as never;
       await setCcConfig(config);
       expect(mockInvoke).toHaveBeenCalledWith("set_cc_config", { config });
+    });
+
+    it("listRunningProcesses calls correct command", async () => {
+      await listRunningProcesses();
+      expect(mockInvoke).toHaveBeenCalledWith("list_running_processes");
     });
   });
 

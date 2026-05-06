@@ -25,6 +25,9 @@ import type {
   DailyXferHistory,
   OldResult,
   ConnectionState,
+  ManagerAutostartInfo,
+  BoincInstallOptions,
+  WorkunitApp,
 } from "../types/boinc";
 import type { OS, Arch } from "../composables/usePlatform";
 
@@ -72,6 +75,24 @@ interface CommandMap {
   // BOINC client launcher
   start_boinc_client: { args: { dataDir: string; clientDir: string }; ret: void };
   detect_boinc_client_dir: { args: Record<string, never>; ret: string };
+
+  // BOINC install onboarding (first run, no binary)
+  detect_boinc_install_options: {
+    args: Record<string, never>;
+    ret: BoincInstallOptions;
+  };
+  install_boinc_via_brew: { args: Record<string, never>; ret: void };
+
+  // BOINC Manager takeover (onboarding)
+  detect_boinc_manager_autostart: {
+    args: Record<string, never>;
+    ret: ManagerAutostartInfo | null;
+  };
+  disable_boinc_manager_autostart: {
+    args: { info: ManagerAutostartInfo };
+    ret: void;
+  };
+  open_login_items_settings: { args: Record<string, never>; ret: void };
 
   // Other
   run_benchmarks: { args: Record<string, never>; ret: void };
@@ -124,6 +145,7 @@ interface CommandMap {
   // CC Config
   get_cc_config: { args: Record<string, never>; ret: CcConfig };
   set_cc_config: { args: { config: CcConfig }; ret: void };
+  list_running_processes: { args: Record<string, never>; ret: string[] };
 
   // Version
   get_newer_version: { args: Record<string, never>; ret: NewerVersionInfo };
@@ -135,6 +157,7 @@ interface CommandMap {
 
   // State
   get_state: { args: Record<string, never>; ret: CcState };
+  get_workunit_apps: { args: Record<string, never>; ret: WorkunitApp[] };
 
   // Read commands
   read_global_prefs_override: { args: Record<string, never>; ret: void };
@@ -162,6 +185,9 @@ interface CommandMap {
   get_build_time: { args: Record<string, never>; ret: string };
   get_platform: { args: Record<string, never>; ret: OS };
   get_arch: { args: Record<string, never>; ret: Arch };
+
+  // Tray sync
+  sync_tray_modes: { args: { taskMode: number; gpuMode: number }; ret: void };
 
   // Updater
   download_update: { args: { assetUrl: string }; ret: void };

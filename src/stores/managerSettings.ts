@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
-import { ref, watch } from "vue";
+import { watch } from "vue";
+import { useLocalStorage } from "@vueuse/core";
 
 export interface ManagerSettings {
   language: string;
@@ -10,6 +11,10 @@ export interface ManagerSettings {
   minimizeToTrayOnClose: boolean;
   startMinimizedToTray: boolean;
   checkForUpdates: boolean;
+  /** Whether the user has seen the first-run BOINC Manager takeover prompt. */
+  onboardingCompleted: boolean;
+  /** Whether the user has seen the first-run "BOINC not installed" prompt. */
+  installOnboardingCompleted: boolean;
 }
 
 const STORAGE_KEY = "boinc-manager-settings";
@@ -23,17 +28,9 @@ const defaults: ManagerSettings = {
   minimizeToTrayOnClose: true,
   startMinimizedToTray: false,
   checkForUpdates: true,
+  onboardingCompleted: false,
+  installOnboardingCompleted: false,
 };
-
-function loadSettings(): ManagerSettings {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...defaults, ...JSON.parse(raw) };
-  } catch {
-    // Ignore corrupt localStorage
-  }
-  return { ...defaults };
-}
 
 async function applyTheme(theme: ManagerSettings["theme"]) {
   if (theme === "system") {
@@ -55,17 +52,12 @@ async function applyTheme(theme: ManagerSettings["theme"]) {
 }
 
 export const useManagerSettingsStore = defineStore("managerSettings", () => {
-  const settings = ref<ManagerSettings>(loadSettings());
+  const settings = useLocalStorage<ManagerSettings>(STORAGE_KEY, { ...defaults }, {
+    mergeDefaults: true,
+    flush: "sync",
+  });
 
   applyTheme(settings.value.theme);
-
-  watch(
-    settings,
-    (v) => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(v));
-    },
-    { deep: true },
-  );
 
   watch(
     () => settings.value.theme,
@@ -75,7 +67,7 @@ export const useManagerSettingsStore = defineStore("managerSettings", () => {
   );
 
   function resetSettings() {
-    settings.value = { ...defaults };
+    Object.assign(settings.value, defaults);
   }
 
   return { settings, resetSettings };

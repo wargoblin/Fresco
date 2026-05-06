@@ -30,8 +30,13 @@ import { useStatisticsStore } from "./stores/statistics";
 import { useMessagesStore } from "./stores/messages";
 import { useNoticesStore } from "./stores/notices";
 import { useDiskUsageStore } from "./stores/diskUsage";
+import { useWorkunitAppsStore } from "./stores/workunitApps";
 import { usePreferencesStore } from "./stores/preferences";
 import { useManagerSettingsStore } from "./stores/managerSettings";
+import { useToastStore } from "./stores/toast";
+import OnboardingTakeoverDialog from "./components/OnboardingTakeoverDialog.vue";
+import BoincInstallDialog from "./components/BoincInstallDialog.vue";
+import type { ManagerAutostartInfo, BoincInstallOptions } from "./types/boinc";
 import {
   setRunMode,
   setGpuMode,
@@ -52,8 +57,10 @@ const statisticsStore = useStatisticsStore();
 const messagesStore = useMessagesStore();
 const noticesStore = useNoticesStore();
 const diskUsageStore = useDiskUsageStore();
+const workunitAppsStore = useWorkunitAppsStore();
 const preferencesStore = usePreferencesStore();
-useManagerSettingsStore(); // Initialize early to apply theme before ConnectView renders
+const managerSettingsStore = useManagerSettingsStore(); // Initialize early to apply theme before ConnectView renders
+const toastStore = useToastStore();
 const showPreferences = ref(false);
 const showAbout = ref(false);
 const showSelectComputer = ref(false);
@@ -147,6 +154,7 @@ function startAllPolling() {
   messagesStore.startPolling();
   noticesStore.startPolling();
   diskUsageStore.startPolling();
+  workunitAppsStore.startPolling();
   preferencesStore.prefetchPreferences();
 }
 
@@ -175,12 +183,238 @@ async function autoConnect() {
   if (connection.state === CONNECTION_STATE.CONNECTED) {
     startAllPolling();
     router.push("/tasks");
+    // Flip out of the loading screen BEFORE awaiting onboarding —
+    // the dialog is mounted only inside the v-else branch, so leaving
+    // `initializing` true would mean the dialog never renders and the
+    // await below would hang the startup flow forever.
+    initializing.value = false;
+    await runOnboardingIfNeeded();
     invoke("cleanup_old_binary").catch(() => {});
-  } else {
-    // Auto-connect failed — show ConnectView
-    router.replace("/");
+    return;
   }
+
+  // Auto-connect failed. If the binary is missing, give the user a chance
+  // to install it; the install-onboarding dialog lives in the v-else branch
+  // so we must clear `initializing` before awaiting it (same reason as above).
   initializing.value = false;
+  if (autoConnectCancelled) return;
+
+  const recovered = await runInstallOnboardingIfNeeded(dataDir);
+  if (autoConnectCancelled) return;
+
+  if (recovered) {
+    startAllPolling();
+    router.push("/tasks");
+    await runOnboardingIfNeeded();
+    invoke("cleanup_old_binary").catch(() => {});
+    return;
+  }
+
+  router.replace("/");
+}
+
+// Tauri v2 rejects a command with either `Error: <msg>` or a named
+// `InvokeError: <msg>` prefix depending on how the error is constructed.
+// Normalize both shapes before comparing against sentinels like "manual".
+function errMessage(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  return raw.replace(/^(?:[A-Za-z]\w*Error|Error):\s*/, "").trim();
+}
+
+// ── BOINC install onboarding (no binary) ────────────────────────
+
+type InstallChoice = "install-succeeded" | "skip";
+
+const installOptions = ref<BoincInstallOptions | null>(null);
+const showInstallDialog = ref(false);
+const installing = ref(false);
+let installResolver: ((choice: InstallChoice) => void) | null = null;
+
+async function runInstallOnboardingIfNeeded(dataDir: string): Promise<boolean> {
+  if (managerSettingsStore.settings.installOnboardingCompleted) return false;
+
+  let opts: BoincInstallOptions | undefined;
+  try {
+    opts = await invoke("detect_boinc_install_options");
+  } catch {
+    // Detection failure shouldn't block startup — fall through to ConnectView.
+    return false;
+  }
+
+  if (!opts || opts.boinc_present) {
+    // Binary exists but we still couldn't connect — not an install problem.
+    return false;
+  }
+
+  installOptions.value = opts;
+  showInstallDialog.value = true;
+  loadingStatus.value = "";
+
+  const choice = await new Promise<InstallChoice>((resolve) => {
+    installResolver = resolve;
+  });
+  installResolver = null;
+  showInstallDialog.value = false;
+  installOptions.value = null;
+  managerSettingsStore.settings.installOnboardingCompleted = true;
+
+  if (choice !== "install-succeeded") return false;
+
+  try {
+    await connection.connectToLocal(dataDir);
+  } catch {
+    return false;
+  }
+  return connection.state === CONNECTION_STATE.CONNECTED;
+}
+
+async function handleInstallBrew() {
+  const dataDir = defaultDataDir(await getOS());
+  installing.value = true;
+  try {
+    await invoke("install_boinc_via_brew");
+    try {
+      await startBoincClient(dataDir);
+    } catch (err) {
+      const msg = errMessage(err).slice(0, 200);
+      toastStore.show(
+        msg || t("onboarding.install.brewError"),
+        "error",
+        8000,
+      );
+      installResolver?.("skip");
+      return;
+    }
+    installResolver?.("install-succeeded");
+  } catch (err) {
+    const msg = errMessage(err).slice(0, 200);
+    toastStore.show(
+      msg || t("onboarding.install.brewError"),
+      "error",
+      8000,
+    );
+    installResolver?.("skip");
+  } finally {
+    installing.value = false;
+  }
+}
+
+async function handleCopyCommand(cmd: string) {
+  try {
+    await navigator.clipboard.writeText(cmd);
+    toastStore.show(t("onboarding.install.copied"), "success");
+  } catch {
+    // Clipboard unavailable (e.g. insecure origin) — ignore silently; the
+    // command is still visible in the dialog for manual copy.
+  }
+}
+
+async function handleOpenUrl(url: string) {
+  try {
+    const { openUrl } = await import("@tauri-apps/plugin-opener");
+    await openUrl(url);
+  } catch {
+    window.open(url, "_blank");
+  }
+  installResolver?.("skip");
+}
+
+function handleSkipInstall() {
+  installResolver?.("skip");
+}
+
+// ── BOINC Manager takeover onboarding ───────────────────────────
+
+const onboardingInfo = ref<ManagerAutostartInfo | null>(null);
+const showOnboarding = ref(false);
+let onboardingResolver: (() => void) | null = null;
+
+async function runOnboardingIfNeeded() {
+  if (managerSettingsStore.settings.onboardingCompleted) return;
+
+  let info: ManagerAutostartInfo | null = null;
+  try {
+    info = await invoke("detect_boinc_manager_autostart");
+  } catch {
+    // Detection is best-effort — a failure shouldn't block the app.
+    managerSettingsStore.settings.onboardingCompleted = true;
+    return;
+  }
+
+  if (!info) {
+    managerSettingsStore.settings.onboardingCompleted = true;
+    return;
+  }
+
+  onboardingInfo.value = info;
+  showOnboarding.value = true;
+  loadingStatus.value = "";
+
+  await new Promise<void>((resolve) => {
+    onboardingResolver = resolve;
+  });
+  onboardingResolver = null;
+  managerSettingsStore.settings.onboardingCompleted = true;
+}
+
+async function handleTakeover() {
+  const info = onboardingInfo.value;
+  showOnboarding.value = false;
+  if (!info) {
+    onboardingResolver?.();
+    return;
+  }
+  try {
+    await invoke("disable_boinc_manager_autostart", { info });
+    toastStore.show(t("onboarding.takeover.successToast"), "success");
+  } catch (err) {
+    const message = errMessage(err);
+    if (message === "manual") {
+      if (info.kind === "MacLoginItem") {
+        // macOS SMAppService Login Items can't be toggled by third-party apps;
+        // point the user at the exact System Settings pane.
+        try {
+          await invoke("open_login_items_settings");
+        } catch {
+          // Ignore — the instructional toast still points the user at the setting.
+        }
+        toastStore.show(t("onboarding.takeover.manualToast"), "info", 8000);
+      } else if (
+        info.kind === "LinuxAutostart" &&
+        info.data.system_wide
+      ) {
+        // /etc/xdg/autostart can only be edited with root; show the path.
+        toastStore.show(
+          t("onboarding.takeover.linuxManualToast", {
+            path: info.data.desktop_path,
+          }),
+          "info",
+          10000,
+        );
+      } else if (info.kind === "WindowsRunKey" && info.data.hive === "HKLM") {
+        // HKLM\...\Run requires admin to delete. Rather than a cryptic
+        // permission-denied toast, point the user at the entry they need
+        // to remove manually (or re-run Fresco elevated).
+        toastStore.show(
+          t("onboarding.takeover.windowsHklmManualToast", {
+            valueName: info.data.value_name,
+          }),
+          "info",
+          10000,
+        );
+      } else {
+        toastStore.show(t("onboarding.takeover.errorToast"), "error");
+      }
+    } else {
+      toastStore.show(t("onboarding.takeover.errorToast"), "error");
+    }
+  }
+  onboardingResolver?.();
+}
+
+function handleKeepBoth() {
+  showOnboarding.value = false;
+  onboardingResolver?.();
 }
 
 function cancelAutoConnect() {
@@ -413,12 +647,17 @@ watch(
             :aria-expanded="!isCollapsed(group.key)"
             @click="toggleCollapsed(group.key)"
           >
-            <span
+            <svg
               class="nav-group-chevron"
               :class="{ collapsed: isCollapsed(group.key) }"
               aria-hidden="true"
-              >&#9662;</span
+              width="12"
+              height="12"
+              viewBox="0 0 20 20"
+              fill="currentColor"
             >
+              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+            </svg>
             {{ group.label }}
           </button>
           <span v-else class="nav-group-label">
@@ -452,11 +691,7 @@ watch(
                 <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
               </template>
               <template v-else-if="item.icon === 'transfer'">
-                <path
-                  fill-rule="evenodd"
-                  d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                  clip-rule="evenodd"
-                />
+                <path d="M5 12a1 1 0 102 0V6.414l1.293 1.293a1 1 0 001.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L5 6.414V12zM15 8a1 1 0 10-2 0v5.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L15 13.586V8z" />
               </template>
               <template v-else-if="item.icon === 'message'">
                 <path
@@ -471,11 +706,9 @@ watch(
                 />
               </template>
               <template v-else-if="item.icon === 'disk'">
-                <path
-                  fill-rule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                  clip-rule="evenodd"
-                />
+                <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z" />
+                <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z" />
+                <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z" />
               </template>
               <template v-else-if="item.icon === 'monitor'">
                 <path
@@ -579,6 +812,22 @@ watch(
       v-if="showAcctMgr"
       :open="showAcctMgr"
       @close="showAcctMgr = false"
+    />
+    <OnboardingTakeoverDialog
+      :open="showOnboarding"
+      :info="onboardingInfo"
+      @takeover="handleTakeover"
+      @keep-both="handleKeepBoth"
+    />
+    <BoincInstallDialog
+      v-if="installOptions"
+      :open="showInstallDialog"
+      :options="installOptions"
+      :installing="installing"
+      @install="handleInstallBrew"
+      @skip="handleSkipInstall"
+      @copy-command="handleCopyCommand"
+      @open-url="handleOpenUrl"
     />
     <ToastContainer />
   </div>
@@ -719,6 +968,7 @@ select {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  padding-bottom: var(--status-bar-offset, 0px);
 }
 
 /* ── Sidebar ──────────────────────────────────────────────────── */
@@ -753,7 +1003,7 @@ select {
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: 600;
   color: var(--color-text-tertiary);
   text-transform: uppercase;
@@ -761,20 +1011,22 @@ select {
   margin-bottom: 2px;
 }
 
-button.nav-group-label {
+.nav-group-label.clickable {
   background: none;
   border: none;
-  font: inherit;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 10px;
   font-weight: 600;
+  font-family: inherit;
   color: var(--color-text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   text-align: left;
   width: 100%;
-  padding: 0;
-}
-
-.nav-group-label.clickable {
+  margin-bottom: 2px;
   cursor: pointer;
   user-select: none;
   border-radius: var(--radius-sm);
@@ -788,7 +1040,7 @@ button.nav-group-label {
 .nav-group-chevron {
   position: absolute;
   left: -2px;
-  font-size: 10px;
+  flex-shrink: 0;
   transition: transform 0.15s ease;
 }
 
@@ -876,6 +1128,7 @@ button.nav-group-label {
 
 .sidebar-footer {
   padding: 4px 12px 6px;
+  overflow: hidden;
 }
 
 .sidebar-actions {
@@ -889,6 +1142,7 @@ button.nav-group-label {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   cursor: pointer;

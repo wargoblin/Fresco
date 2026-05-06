@@ -52,7 +52,9 @@
       "progress": "Прогресс",
       "elapsed": "Затрачено времени",
       "remaining": "Осталось",
+      "deadline": "Крайний срок",
       "status": "Состояние",
+      "application": "Приложение",
       "resources": "Выделено ресурсов",
       "task": "Задание"
     },
@@ -90,6 +92,7 @@
     "addProject": "Добавить проект",
     "accountManager": "Менеджер учётных записей",
     "columns": "Столбцы",
+    "customizeColumns": "Настроить отображение столбцов",
     "loading": "Загрузка проектов...",
     "empty": "Нет подключённых проектов.",
     "col": {
@@ -98,6 +101,7 @@
       "team": "Команда",
       "totalCredit": "Общий кредит",
       "avgCredit": "Средний кредит",
+      "resourceShare": "Выделено ресурсов",
       "status": "Состояние",
       "source": "Источник"
     },
@@ -288,7 +292,8 @@
   "notices": {
     "title": "Уведомления",
     "loading": "Загрузка уведомлений...",
-    "empty": "Нет уведомлений."
+    "empty": "Нет уведомлений.",
+    "noticeFromBoinc": "Уведомление от BOINC"
   },
   "connect": {
     "title": "Подключение к клиенту BOINC",
@@ -323,14 +328,14 @@
       "runOnBatteries": "Выполнять при работе от батареи",
       "runIfUserActive": "Выполнять при активности пользователя",
       "idleTime": "Время простоя перед запуском (мин)",
-      "maxCpus": "Макс. используемых CPU (%)",
-      "cpuUsageLimit": "Лимит загрузки CPU (%)",
-      "ramBusy": "RAM при активности (доля)",
-      "ramIdle": "RAM при простое (доля)",
+      "maxCpus": "Макс. используемых CPU",
+      "cpuUsageLimit": "Лимит загрузки CPU",
+      "ramBusy": "RAM при активности",
+      "ramIdle": "RAM при простое",
       "startHour": "Начало вычислений",
       "endHour": "Конец вычислений",
       "suspendNoInput": "Приостановить при простое ввода (мин)",
-      "suspendCpuUsage": "Приостановить при загрузке CPU выше (%)",
+      "suspendCpuUsage": "Приостановить при загрузке CPU выше",
       "leaveInMemory": "Оставлять приложения в памяти",
       "additionalBuffer": "Дополнительный буфер заданий (дни)",
       "schedulingPeriod": "Период планирования CPU (мин)",
@@ -347,7 +352,7 @@
     },
     "storage": {
       "maxDiskGb": "Макс. использование диска (GB)",
-      "maxDiskPct": "Макс. использование диска (%)",
+      "maxDiskPct": "Макс. использование диска",
       "minFreeGb": "Мин. свободного места (GB)",
       "workBuffer": "Буфер заданий (дни)"
     },
@@ -669,14 +674,16 @@
   "proxy": {
     "title": "Настройки прокси",
     "loading": "Загрузка настроек прокси...",
+    "none": "Нет",
     "httpProxy": "HTTP прокси",
-    "useHttp": "Использовать HTTP прокси",
     "serverName": "Имя сервера",
     "useHttpAuth": "Использовать HTTP аутентификацию",
-    "socksProxy": "SOCKS прокси",
-    "useSocks": "Использовать SOCKS прокси",
+    "socksProxy": "SOCKS5",
     "useSocks5Dns": "Использовать SOCKS5 удалённый DNS",
-    "noProxyHosts": "Хосты без прокси (через запятую)",
+    "noProxyHosts": "Хосты без прокси",
+    "noProxyMessage": "Прямое подключение — прокси не настроен",
+    "removeHost": "Удалить хост",
+    "addHostPlaceholder": "Добавить хост...",
     "port": "Порт:",
     "username": "Имя пользователя:",
     "password": "Пароль",
@@ -704,5 +711,37 @@
     "newNoticesBody": "{count} новое уведомление | {count} новых уведомления | {count} новых уведомлений",
     "connectionLostTitle": "Соединение потеряно",
     "connectionLostBody": "Потеряно соединение с клиентом BOINC."
+  },
+  "onboarding": {
+    "takeover": {
+      "title": "Сделать Fresco вашим менеджером BOINC?",
+      "lead": "Мы обнаружили, что официальный BOINC Manager стартует вместе с системой.",
+      "explanation": "Fresco и BOINC Manager работают с одним и тем же вычислительным клиентом, второй GUI не нужен. Мы можем отключить автозапуск Manager — проекты и прогресс останутся на месте.",
+      "macLoginItemNote": "В этой версии macOS пункты автозапуска отключаются вручную. Мы откроем нужный раздел системных настроек.",
+      "useFrescoOnly": "Оставить только Fresco",
+      "keepBoth": "Оставить оба",
+      "successToast": "Автозапуск BOINC Manager отключён.",
+      "manualToast": "Открыли системные настройки — снимите «BOINCManager» в пункте автозапуска.",
+      "linuxManualToast": "Автозапуск задан на уровне системы ({path}) — удалите файл с правами root.",
+      "windowsHklmManualToast": "Системный Run-ключ «{valueName}» в HKLM — удалите его из сессии с правами администратора.",
+      "errorToast": "Не удалось отключить автозапуск BOINC Manager."
+    },
+    "install": {
+      "title": "BOINC ещё не установлен",
+      "lead": "Fresco нужен вычислительный клиент BOINC для запуска задач. Мы можем установить его за вас.",
+      "brewAction": "Установить через Homebrew",
+      "brewInProgress": "Устанавливаем BOINC…",
+      "brewError": "Не удалось установить через Homebrew. Попробуйте ещё раз или установите BOINC вручную.",
+      "macosNoBrewLead": "Homebrew не найден на этом Mac. Скачайте BOINC с официального сайта.",
+      "linuxLead": "Выполните в терминале, чтобы установить клиент BOINC:",
+      "linuxNoPmFallback": "Поддерживаемый пакетный менеджер не найден. Скачайте BOINC с официального сайта.",
+      "linuxCopyButton": "Копировать",
+      "copied": "Команда скопирована в буфер обмена.",
+      "windowsLead": "Скачайте BOINC с официального сайта и вернитесь сюда. Fresco автоматически подключится, когда клиент запустится.",
+      "windowsManagerNote": "В установщике снимите галочку «BOINC Manager» — Fresco заменяет его.",
+      "downloadButton": "Скачать BOINC",
+      "showMore": "Другие пакетные менеджеры",
+      "skip": "Пропустить"
+    }
   }
 }

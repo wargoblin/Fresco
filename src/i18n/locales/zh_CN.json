@@ -52,7 +52,9 @@
       "progress": "进度",
       "elapsed": "已用时间",
       "remaining": "剩余时间",
+      "deadline": "截止日期",
       "status": "统计",
+      "application": "应用程序",
       "resources": "资源",
       "task": "任务"
     },
@@ -90,6 +92,7 @@
     "addProject": "添加项目",
     "accountManager": "账户管理器",
     "columns": "列",
+    "customizeColumns": "显示、隐藏或重新排列列",
     "loading": "正在加载项目...",
     "empty": "没有已添加的项目。",
     "col": {
@@ -98,6 +101,7 @@
       "team": "团队",
       "totalCredit": "总积分",
       "avgCredit": "平均积分",
+      "resourceShare": "资源分享",
       "status": "统计",
       "source": "来源"
     },
@@ -288,7 +292,8 @@
   "notices": {
     "title": "通知",
     "loading": "正在加载通知...",
-    "empty": "当前没有通知。"
+    "empty": "当前没有通知。",
+    "noticeFromBoinc": "来自 BOINC 的通知"
   },
   "connect": {
     "title": "连接到 BOINC 客户端",
@@ -323,14 +328,14 @@
       "runOnBatteries": "使用电池时运行",
       "runIfUserActive": "用户活动时运行",
       "idleTime": "开始运行前的空闲时间（分钟）",
-      "maxCpus": "最大 CPU 使用率（%）",
-      "cpuUsageLimit": "CPU 使用限制（%）",
-      "ramBusy": "忙碌时内存使用比例",
-      "ramIdle": "空闲时内存使用比例",
+      "maxCpus": "最大 CPU 使用率",
+      "cpuUsageLimit": "CPU 使用限制",
+      "ramBusy": "忙碌时内存使用",
+      "ramIdle": "空闲时内存使用",
       "startHour": "计算开始时间",
       "endHour": "计算结束时间",
       "suspendNoInput": "无输入时暂停（分钟）",
-      "suspendCpuUsage": "CPU 使用率超过时暂停（%）",
+      "suspendCpuUsage": "CPU 使用率超过时暂停",
       "leaveInMemory": "将应用保留在内存中",
       "additionalBuffer": "额外工作缓冲（天）",
       "schedulingPeriod": "CPU 调度周期（分钟）",
@@ -347,7 +352,7 @@
     },
     "storage": {
       "maxDiskGb": "最大磁盘使用量（GB）",
-      "maxDiskPct": "最大磁盘使用率（%）",
+      "maxDiskPct": "最大磁盘使用率",
       "minFreeGb": "最小可用磁盘空间（GB）",
       "workBuffer": "工作缓冲（天）"
     },
@@ -669,17 +674,19 @@
   "proxy": {
     "title": "代理设置",
     "loading": "正在加载代理设置...",
+    "none": "无",
     "httpProxy": "HTTP 代理",
-    "socksProxy": "SOCKS 代理",
-    "useHttp": "使用 HTTP 代理",
+    "socksProxy": "SOCKS5",
     "serverName": "服务器名称",
     "port": "端口：",
     "useHttpAuth": "使用 HTTP 认证",
     "username": "用户名：",
     "password": "密码",
-    "useSocks": "使用 SOCKS 代理",
     "useSocks5Dns": "使用 SOCKS5 远程 DNS",
-    "noProxyHosts": "免代理主机（逗号分隔）",
+    "noProxyHosts": "不使用代理的主机",
+    "noProxyMessage": "直接连接 — 未配置代理",
+    "removeHost": "移除主机",
+    "addHostPlaceholder": "添加主机名...",
     "cancel": "取消",
     "saving": "正在保存...",
     "save": "保存(S)"

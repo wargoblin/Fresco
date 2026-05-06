@@ -1,12 +1,11 @@
 import { ref } from "vue";
+import { useLocalStorage } from "@vueuse/core";
 import { invoke } from "../lib/typedInvoke";
 import { useManagerSettingsStore } from "../stores/managerSettings";
 import { getOS, getArch, platformAssetPattern } from "./usePlatform";
 
 const GITHUB_API_URL =
   "https://api.github.com/repos/AufarZakiev/Fresco/releases/latest";
-const THROTTLE_KEY = "fresco-last-update-check";
-const DISMISSED_KEY = "fresco-update-dismissed";
 
 interface GitHubAsset {
   name: string;
@@ -34,37 +33,36 @@ const downloading = ref(false);
 const downloaded = ref(false);
 const downloadError = ref("");
 
+const lastCheckTimestamp = useLocalStorage("fresco-last-update-check", 0);
+const dismissedDate = useLocalStorage("fresco-update-dismissed", "");
+
 // Fetch build time eagerly so About dialog shows it immediately
 invoke("get_build_time").then((bt) => {
   buildTime.value = bt;
 });
 
+// Each platform's updater expects a specific asset format. Enforcing the
+// extension prevents older releases that still ship `.app.zip` from being
+// offered on macOS, which the DMG-based updater cannot consume.
+const REQUIRED_EXTENSION: Record<string, string> = {
+  windows: ".exe",
+  macos: ".dmg",
+  linux: ".AppImage",
+};
+
 async function matchAsset(assets: GitHubAsset[]): Promise<string> {
   const [os, arch] = await Promise.all([getOS(), getArch()]);
   const pattern = platformAssetPattern(os, arch);
-  const match = assets.find((a) => a.name.includes(pattern));
+  const requiredExt = REQUIRED_EXTENSION[os];
+  const match = assets.find(
+    (a) => a.name.includes(pattern) && a.name.endsWith(requiredExt),
+  );
   return match?.browser_download_url ?? "";
 }
 
 function extractBuildTime(body: string): string {
   const match = body.match(/build_time:(\S+)/);
   return match?.[1] ?? "";
-}
-
-function isDismissed(date: string): boolean {
-  try {
-    return localStorage.getItem(DISMISSED_KEY) === date;
-  } catch {
-    return false;
-  }
-}
-
-function markChecked() {
-  try {
-    localStorage.setItem(THROTTLE_KEY, String(Date.now()));
-  } catch {
-    // ignore
-  }
 }
 
 export async function checkForUpdates(force = false) {
@@ -93,7 +91,7 @@ export async function checkForUpdates(force = false) {
     }
 
     const release: GitHubRelease = await response.json();
-    markChecked();
+    lastCheckTimestamp.value = Date.now();
 
     // Compare the app's embedded build time against the one in the release body.
     // Both are set from the same CI timestamp, so they match exactly when
@@ -101,11 +99,20 @@ export async function checkForUpdates(force = false) {
     const releaseBuildTime = extractBuildTime(release.body ?? "");
 
     if (releaseBuildTime && releaseBuildTime !== bt) {
-      updateAvailable.value = true;
+      // Only surface the banner if the release ships an asset this platform
+      // can actually install. Otherwise (e.g. macOS release still on legacy
+      // .app.zip, or an architecture not built that day) we'd be teasing the
+      // user with a notification they can't act on.
+      const url = await matchAsset(release.assets);
+      if (!url) {
+        updateAvailable.value = false;
+        return;
+      }
+      assetUrl.value = url;
       releaseDate.value = release.published_at;
       releaseUrl.value = release.html_url;
-      assetUrl.value = await matchAsset(release.assets);
-      dismissed.value = isDismissed(release.published_at);
+      dismissed.value = dismissedDate.value === release.published_at;
+      updateAvailable.value = true;
     } else {
       updateAvailable.value = false;
     }
@@ -132,11 +139,7 @@ export async function startBackgroundDownload() {
 
 export function dismissUpdate() {
   dismissed.value = true;
-  try {
-    localStorage.setItem(DISMISSED_KEY, releaseDate.value);
-  } catch {
-    // ignore
-  }
+  dismissedDate.value = releaseDate.value;
 }
 
 export function useUpdateCheck() {

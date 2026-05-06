@@ -52,7 +52,9 @@
       "progress": "Progreso",
       "elapsed": "Transcurrido",
       "remaining": "Restante",
+      "deadline": "Fecha límite",
       "status": "Estado",
+      "application": "Aplicación",
       "resources": "Recursos",
       "task": "Tarea"
     },
@@ -90,6 +92,7 @@
     "addProject": "Añadir proyecto",
     "accountManager": "Administrador de cuentas",
     "columns": "Columnas",
+    "customizeColumns": "Mostrar, ocultar o reordenar columnas",
     "loading": "Cargando proyectos...",
     "empty": "No hay proyectos asociados.",
     "col": {
@@ -98,6 +101,7 @@
       "team": "Equipo",
       "totalCredit": "Crédito total",
       "avgCredit": "Crédito promedio",
+      "resourceShare": "Asignación de recursos",
       "status": "Estado",
       "source": "Origen"
     },
@@ -288,7 +292,8 @@
   "notices": {
     "title": "Avisos",
     "loading": "Cargando avisos...",
-    "empty": "No hay avisos en este momento."
+    "empty": "No hay avisos en este momento.",
+    "noticeFromBoinc": "Aviso de BOINC"
   },
   "connect": {
     "title": "Conectar al cliente BOINC",
@@ -323,14 +328,14 @@
       "runOnBatteries": "Ejecutar con batería",
       "runIfUserActive": "Ejecutar si el usuario está activo",
       "idleTime": "Tiempo de inactividad antes de ejecutar (min)",
-      "maxCpus": "Máximo de CPUs utilizadas (%)",
-      "cpuUsageLimit": "Límite de uso de CPU (%)",
-      "ramBusy": "RAM en uso (fracción)",
-      "ramIdle": "RAM en inactividad (fracción)",
+      "maxCpus": "Máximo de CPUs utilizadas",
+      "cpuUsageLimit": "Límite de uso de CPU",
+      "ramBusy": "RAM en uso",
+      "ramIdle": "RAM en inactividad",
       "startHour": "Hora de inicio de cómputo",
       "endHour": "Hora de fin de cómputo",
       "suspendNoInput": "Suspender si no hay entrada reciente (min)",
-      "suspendCpuUsage": "Suspender si el uso de CPU supera (%)",
+      "suspendCpuUsage": "Suspender si el uso de CPU supera",
       "leaveInMemory": "Dejar aplicaciones en memoria",
       "additionalBuffer": "Buffer de trabajo adicional (días)",
       "schedulingPeriod": "Período de planificación de CPU (min)",
@@ -347,7 +352,7 @@
     },
     "storage": {
       "maxDiskGb": "Máximo de disco utilizado (GB)",
-      "maxDiskPct": "Máximo de disco utilizado (%)",
+      "maxDiskPct": "Máximo de disco utilizado",
       "minFreeGb": "Mínimo de disco libre (GB)",
       "workBuffer": "Buffer de trabajo (días)"
     },
@@ -669,17 +674,19 @@
   "proxy": {
     "title": "Configuración de proxy",
     "loading": "Cargando configuración de proxy...",
+    "none": "Ninguno",
     "httpProxy": "Proxy HTTP",
-    "socksProxy": "Proxy SOCKS",
-    "useHttp": "Usar proxy HTTP",
+    "socksProxy": "SOCKS5",
     "serverName": "Nombre del servidor",
     "port": "Puerto:",
     "useHttpAuth": "Usar autenticación HTTP",
     "username": "Nombre  de usuario:",
     "password": "Contraseña",
-    "useSocks": "Usar proxy SOCKS",
     "useSocks5Dns": "Usar DNS remoto SOCKS5",
-    "noProxyHosts": "Hosts sin proxy (separados por comas)",
+    "noProxyHosts": "Hosts sin proxy",
+    "noProxyMessage": "Conexión directa — sin proxy configurado",
+    "removeHost": "Eliminar host",
+    "addHostPlaceholder": "Agregar host...",
     "cancel": "Cancelar",
     "saving": "Guardando...",
     "save": "Guardar"
