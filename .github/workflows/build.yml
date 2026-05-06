@@ -107,6 +107,32 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Import Developer ID certificate into a temporary keychain so tauri-action
+      # can sign the bundle. Gracefully degrades to ad-hoc signing (from
+      # tauri.conf.json > bundle.macOS.signingIdentity "-") if APPLE_CERTIFICATE
+      # secret is not configured — the build still succeeds, just without a
+      # Developer ID trust chain. Linux/Windows matrix entries skip this step.
+      - name: Import Apple Developer Certificate (macOS, if configured)
+        if: startsWith(matrix.platform, 'macos')
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          if [ -z "$APPLE_CERTIFICATE" ]; then
+            echo "APPLE_CERTIFICATE secret not set — falling back to ad-hoc signing."
+            exit 0
+          fi
+          echo "$APPLE_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          security import /tmp/certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          security find-identity -v -p codesigning build.keychain
+          rm /tmp/certificate.p12
+
       - name: Build Tauri
         uses: tauri-apps/tauri-action@v0
         env:
@@ -114,6 +140,16 @@ jobs:
           # Override Tauri's default "skip DMG Finder prettifying on CI" — without this
           # the macOS DMG ships without background image and custom icon positions.
           TAURI_BUNDLER_DMG_IGNORE_CI: ${{ startsWith(matrix.platform, 'macos') && 'true' || '' }}
+          # Developer ID signing + notarization. All vars are optional — if any of
+          # them are missing, tauri-action falls back to the behavior defined in
+          # tauri.conf.json (currently ad-hoc "-"). Notarization is attempted only
+          # when APPLE_ID/APPLE_PASSWORD/APPLE_TEAM_ID are all present.
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           args: --target ${{ matrix.target }} ${{ startsWith(matrix.platform, 'windows') && '--no-bundle' || '' }}
 

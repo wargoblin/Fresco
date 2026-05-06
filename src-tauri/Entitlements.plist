@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      Distributing outside the App Store. Hardened runtime is mandatory for
+      Apple notarization, but App Sandbox is not — leaving it off so Fresco
+      can read ~/Library/Application Support/BOINC and spawn tools like
+      `hdiutil` (updater) and `brew` (first-run install dialog).
+    -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+
+    <!--
+      WebKit (wry) embeds JavaScriptCore. Under hardened runtime the JIT
+      compiler needs these two entitlements, otherwise the webview gets
+      SIGKILL'd on first render after notarization.
+    -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+
+    <!--
+      BOINC RPC: client connects to 127.0.0.1:31416 or remote hosts.
+      Server entitlement covers Tauri's single-instance IPC.
+    -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>com.apple.security.network.server</key>
+    <true/>
+</dict>
+</plist>
