@@ -9,6 +9,25 @@
 
 ## Записи
 
+## [2026-05-11] - CI: fail unsigned macOS releases
+
+### Что сделано
+- Подтверждена причина Gatekeeper "Move to Trash" для `Fresco_macOS_ARM64.dmg`: опубликованный app bundle был ad-hoc signed (`TeamIdentifier=not set`) и без stapled notarization ticket.
+- Release-сборки macOS на `master` теперь требуют Apple Developer ID/notarization secrets, импортируют `Developer ID Application` certificate и передают signing/notarization env в `tauri-action`.
+- Добавлена CI-проверка DMG: монтирует артефакт, проверяет `codesign`, Developer ID authority, TeamIdentifier, `spctl` и `xcrun stapler validate`.
+- Подключён `Entitlements.plist` для hardened runtime WebKit/JSC и сетевых возможностей.
+- Release notes больше не описывают ручной Gatekeeper workaround для новых macOS релизов.
+
+### Зачем
+Silent fallback на ad-hoc подпись создавал успешный GitHub release, который чистая macOS блокировала как повреждённый. Теперь релиз не должен публиковаться, если macOS артефакт не Developer ID signed и notarized.
+
+### Обновлено
+- [x] Root cause подтверждён на опубликованном ARM DMG.
+- [x] Проверки: `git diff --check`, JSON/YAML parse, `pnpm lint`, `pnpm test` (620).
+- [x] `agent_docs/development-history.md`
+- [ ] CI release signing требует Apple secrets в GitHub; локально notarized build без них не воспроизводится.
+- [ ] `agent_docs/adr.md` — не требуется, это release pipeline guard.
+
 ## [2026-05-10] - CI: allow pnpm build script for @parcel/watcher
 
 ### Что сделано
